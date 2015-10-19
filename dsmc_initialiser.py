@@ -91,8 +91,9 @@ class Initialiser:
     def run(cells, gas, domain, n_particles_in_cell, ref_point):
         cell_detector = CellDetector(cells, domain.surface, ref_point)
         cells_in = cell_detector.detect_all()
-        particles = dm_p.Particles(n_particles_in_cell * len(cells_in), gas)
-        particles.setup(domain.volume)
+        particles = dm_p.Particles(n_particles_in_cell * len(cells_in))
+        particles.setup(domain.volume, gas.mole_fraction, gas.number_density,
+                             gas.species, gas.mpv)
         particle_initialiser = ParticleInitialiser(particles, cells, cells_in,
                                                      n_particles_in_cell, gas)
         particle_initialiser.run()

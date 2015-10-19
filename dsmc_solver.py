@@ -22,7 +22,6 @@ class DsmcSolver:
         self.n_steps = n_steps
         self.particles, self.cells_in = dm_i.Initialiser.run(cells, gas, domain,
                                                 n_particles_in_cell, ref_point)
-        self.particles.setup(domain.volume)
         
         self.distributor = dm_c.Distributor(cells, self.particles)
         
@@ -36,8 +35,8 @@ class DsmcSolver:
             self.flag = True
             self.boundary = dm_b.Boundary(cells, gas, domain, n_particles_in_cell,
                                       self.particles, ref_point)
-        self.reflection_manager =dm_r.ReflectionManager(domain.surface, 
-                                    self.particles, domain.surface_temperature)
+        self.movement_manager =dm_r.MovementManager(self.particles, domain.surface,
+                                                    domain.surface_temperature)
         self.dt = dt
         self.temperature = np.zeros(len(cells.temperature))
         self.number_density = np.zeros_like(self.temperature)
@@ -45,10 +44,7 @@ class DsmcSolver:
     
     def run(self, detector_key, collider_key, reflection_key):
         for i in range(self.n_steps):
-            reflected_particles = self.reflection_manager.run(reflection_key, 
-                                                              self.dt)
-            index_list = self._find_moving_particles(reflected_particles)
-            self.particles.move(self.dt, index_list)
+            self.movement_manager.move_all(reflection_key, self.dt)
             if (self.flag):
                 self.boundary.run(self.dt)
             self.distributor.distribute_all_particles()
@@ -83,7 +79,7 @@ def main():
     width = 1.0
     volume = 0.36
     ensemble_sample = 100
-    time_av_sample = 10
+    time_av_sample = 100
     time = 2.0
     dof = 3.0
     mass = 66.3e-27

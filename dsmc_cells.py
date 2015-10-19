@@ -76,7 +76,7 @@ class RectCells:
     
     # assuming equal length and width.
     def find_cell_index(self, x, y):
-        datum = (self.xc[0] - self.length[0] / 2.0, self.yc[0] - self.width[0] / 2.0)
+        datum = (self.xc[0]-self.length[0]/2.0, self.yc[0]-self.width[0]/2.0)
         x = x - datum[0]
         y = y - datum[1]
         cell_index = int(y / self.width[0]) * self.n_x
@@ -118,6 +118,17 @@ class Distributor:
         self.reset_particles_inside()
 #        print "n_cells = ", len(self.cells.xc) * len(self.cells.yc)
         for index in range(len(self.particles.x)):
+            y = self.particles.x[index] - 0.2
+            if (y > self.particles.y[index]):
+                vel = (self.particles.u[index], self.particles.v[index])
+                loc = (self.particles.x[index] - vel[0] * 1e-5,
+                       self.particles.y[index] - vel[1] * 1e-5)
+                if (loc[1] + 0.2 < loc[0] or loc[0] < 0.0 or loc[1] < 0.0 or 
+                    loc[0] > 1.0 or loc[1] > 1.0):
+                    flag = True
+                else:
+                    flag = False
+                print "not reflected index loc vel flag  = ", index, loc, vel, flag
             cell_index = self.cells.find_cell_index(self.particles.x[index], 
                                                     self.particles.y[index])
 #           print "cell_index = ", cell_index, index

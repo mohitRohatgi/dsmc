@@ -8,6 +8,45 @@ Created on Sun Sep 27 14:48:54 2015
 import numpy as np
 
 
+class NormalFinder:
+    def __init__(self, surface):
+        self.surface = surface
+        self.surface_normal = []
+        self.surface_tangent = []
+        self._find_all()
+    
+    
+    def get_normal(self):
+        return self.surface_normal
+    
+    
+    def get__tangent(self):
+        return self.surface_tangent
+    
+    
+    def _find_all(self):
+        self._find(0, len(self.surface) - 2)
+    
+    
+    def _find(self, start, end):
+        start, end = int(start), int(end)
+        if start == end:
+            dx = self.surface[start + 1][0] - self.surface[start][0]
+            dy = self.surface[start + 1][1] - self.surface[start][1]
+            ds = np.sqrt(dx * dx + dy * dy)
+            dx /= ds
+            dy /= ds
+            normal = (-dy, dx)
+            tangent = (dx, dy)
+            self.surface_normal.append(normal)
+            self.surface_tangent.append(tangent)
+        else:
+            mid = int((start + end) / 2)
+            self._find(start, mid)
+            self._find(mid + 1, end)
+
+
+
 class SurfaceLocator:
     def __init__(self, surface):
         self.surface = surface
@@ -43,9 +82,9 @@ class SurfaceLocator:
     def _find_surface_slope(self, index):
         constt1 = self.surface[index + 1][0] - self.surface[index][0]
         constt2 = self.surface[index + 1][1] - self.surface[index][1]
-        if np.abs(constt1) <= 1.0e-6:
-            slope = 1.0e6
-        elif np.abs(constt2) <= 1.0e-6:
+        if np.abs(constt1) <= 1.0e-8:
+            slope = 1.0e8
+        elif np.abs(constt2) <= 1.0e-8:
             slope = 0.0
         else:
             slope = (constt2 / constt1)
@@ -159,12 +198,12 @@ class PointDetector:
     # surface.
     def _find_sign(self, segment_index, point):
         slope = self.surface_slope[segment_index]
-        if np.abs(slope) <= 1.0e-6:
+        if np.abs(slope) <= 1.0e-8:
             if (point[1] < self.surface[segment_index][1]):
                 return -1
             else:
                 return 1
-        elif np.abs(slope) >= 1.0e6:
+        elif np.abs(slope) >= 1.0e8:
             if (point[0] < self.surface[segment_index][0]):
                 return -1
             else:
@@ -179,38 +218,18 @@ class PointDetector:
 
 
 
+# this checks whether the particular particle would intersect with the surface.
+# If it intersects, it stores the por, intersecting time and the index of the
+# surface it gets reflected from. 
 class IntersectionDetector:
     def __init__(self, surface):
         self.surface = surface
         self.dt = 0.0
-        self.locator = SurfaceLocator(surface)
-        self.surface_slope = self.locator.get_slope()
-        self.surface_constant = self.locator.get_constant()
-        self.points = []
-        self.slope = []
-        self.vel = []
-        self.detected_points = []
-        self.intersect_time = []
-        self.por = []
-        self.detected_surface = []
-    
-    
-    def detect_all(self, points, u, v, dt):
-        self.dt = dt
-        self.points = points
-        self.u = u
-        self.v = v
-        self.detected_points = []
-        self.intersect_time = []
-        self.por = []
-        self.detected_surface = []
-        self._detect_subset(0, len(points) - 1)
-    
-    
-    def get_points(self):
-#        self.test()
-#        self.test1()
-        return self.detected_points
+        self.normal_finder = NormalFinder(surface)
+        self.surface_tangent = self.normal_finder.get__tangent()
+        self.surface_index = None
+        self.intersect_time = None
+        self.por = None
     
     
     def get_intersect_time(self):
@@ -221,114 +240,87 @@ class IntersectionDetector:
         return self.por
     
     
-    def get_surface(self):
-        return self.detected_surface
+    def get_surface_index(self):
+        return self.surface_index
     
     
-    def _detect_subset(self, start, end):
-        start, end = int(start), int(end)
-        if start == end:
-            dt, por, surface_index = self._detect(start, 0, 
-                                                  len(self.surface_slope) - 1)
-            if dt != None:
-                self.detected_points.append(start)
-                self.intersect_time.append(dt)
-                self.por.append(por)
-                self.detected_surface.append(surface_index)
+    def detect_point(self, point, u, v, dt):
+        self.dt = dt
+        self.intersect_time = None
+        self.por = None
+        self.surface_index = None
+        if (self._detect_point(point, u, v, 0, len(self.surface) - 2)):
+            return True
         else:
-            mid = int((start + end) / 2)
-            self._detect_subset(start, mid)
-            self._detect_subset(mid + 1, end)
+            return False
     
     
-    def _detect(self, point_index, start, end, dt=None, por=None, 
-                surface_index=None):
+    # por represents the por of the particle and surface being considered while
+    # self.por is the surface it would reflect after checking with all the surfaces.
+    def _detect_point(self, point, u, v, start, end):
         start, end = int(start), int(end)
         if start == end:
-            point = self.points[point_index]
-            u = self.u[point_index]
-            v = self.v[point_index]
-            slope = v / u
-            _por = self._find_por(point, slope, start)
-            if _por != None:
-                intersect_time = self._find_intersect_time(point, u, v, _por)
+            por = self._find_por(point, u, v, start)
+            print "por = ", por 
+            if por == None and self.por == None:
+                return False
+#            elif (np.sqrt((por[0] - point[0]) ** 2.0 + 
+#                        (por[1] - point[1]) ** 2.0) < 1e-6):
+#                self.intersect_time = 0.0
+#                self.por = por
+#                self.surface_index = start
+#                print "yes"
+#                return True
             else:
-                intersect_time = None
-            
-            if intersect_time < self.dt:
-                if dt == None:
-                    dt = intersect_time
-                    por = _por
-                    surface_index = start
-                elif intersect_time < dt:
-                    dt = intersect_time
-                    por = _por
-                    surface_index = start
+                intersect_time = self._find_intersect_time(point, u, v, por)
+                print "intersect time = ", intersect_time
+                if intersect_time >= -1.0e-3 * self.dt:
+                    if intersect_time <= self.dt:
+                        self._set_data(por, intersect_time, start)
+                        return True
+                    elif np.abs(intersect_time - self.dt) < self.dt * 1.0e-2:
+                        self.por = por
+                        self.intersect_time = self.dt * (0.99)
+                        self.surface_index = start
+                        return True
+                    else:
+                        return False
+                else:
+                    return False
         else:
             mid = int((start + end) / 2)
-            self._detect(point_index, start, mid, dt, por)
-            self._detect(point_index, mid + 1, end, dt, por)
-        return (dt, por, surface_index)
+            truthValue1 = self._detect_point(point, u, v, start, mid)
+            truthValue2 = self._detect_point(point, u, v, mid + 1, end)
+            if truthValue1 or truthValue2:
+                return True
+            else:
+                return False
     
     
-    def _find_por(self, point, slope, index):
-        c = point[1] - slope * point[0]
-        if np.abs(slope - self.surface_slope[index]) <= 1.0e-6:
+    # por = None means that the particle is moving parallel to surface.
+    def _find_por(self, point, u, v, index):
+        constt = self.surface_tangent[index]
+        constt = constt[1] * u - v * constt[0]
+        if constt == 0.0:
             return None
         else:
-            if np.abs(self.surface_slope[index]) >= 1.0e6:
-                y = self.surface[index][1]
-                x = (y - c) / slope
-            elif (np.abs(self.surface_slope[index]) <= 1.0e-6):
-                x = self.surface[index][0]
-                y = slope * x + c
-            else:
-                x = (self.surface_constant[index] - c) / (
-                                            slope - self.surface_slope[index])
-                y = slope * x + c
+            t = u * point[1] + v * (self.surface[index][0] - point[0])
+            t -= u * self.surface[index][1]
+            t /= constt
+            x = self.surface[index][0] + t * self.surface_tangent[index][0]
+            y = self.surface[index][1] + t * self.surface_tangent[index][1]
             return (x, y)
     
     
-    def _find_intersect_time(self, point, u, v, _por):
+    def _find_intersect_time(self, point, u, v, por):
         vel = np.sqrt(u ** 2.0 + v ** 2.0)
-        dx, dy = point[0] - _por[0], point[1] - _por[1]
+        dx, dy = por[0] - point[0], por[1] - point[1]
         dt =  (u * dx + v * dy) / vel / vel
         return dt
     
     
-    # test if detected particles are inside or outside.
-    def test(self):
-        for index in self.detected_points:
-            self.check(index)
-    
-    
-    # test if particles other than detected particles are outside of domain.
-    def test1(self):
-        for index in range(len(self.u)):
-            if index in self.detected_points:
-                continue
-            else:
-                self.check1(index)
-    
-    
-    def check(self, index):
-        y = self.surface_slope[0] * self.points[index][0] + self.surface_constant[0]
-        sign = y - self.points[index][1]
-        if sign < -1.0e-4:
-            print "correct_index = ", index, self.points[index]
-        else:
-            print "incorrect_index = ", index, self.points[index]
-    
-    
-    def check1(self, index):
-        x1 = self.points[index][0] + self.u[index] * self.dt
-        y1 = self.points[index][1] + self.dt * self.v[index]
-        y = self.surface_slope[0] * x1 + self.surface_constant[0]
-        sign = y - y1
-        if sign > 0.0:
-            print "index1 = ", index
-            print "point1 = ", self.points[index]
-            print "slope1 = ", self.v[index], self.u[index]
-        else:
-            print "correct_index1 = ", index
-            print "correct slope1 = ", self.v[index], self.u[index]
+    def _set_data(self, por, intersect_time, surface_index):
+        if intersect_time < self.intersect_time or self.intersect_time == None:
+            self.intersect_time = intersect_time
+            self.por = por
+            self.surface_index = surface_index

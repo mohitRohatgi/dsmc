@@ -51,9 +51,9 @@ class Boundary:
     # corresponding to the particles crossing into domain from boundary cells.
     def run(self, dt):
         self._setup()
-        b_particles = dm_p.Particles(sum(self.total_particles), self.gas)
+        b_particles = dm_p.Particles(sum(self.total_particles))
         self.particle_setter.run(b_particles)
-        b_particles.move(dt, range(len(b_particles.x)))
+        b_particles.move_all(dt)
         particles_out, b_particles_in = self.particle_detector.run(b_particles)
         self.particle_modifier.run(particles_out, b_particles_in, b_particles)
     
@@ -376,13 +376,11 @@ class ParticleModifier:
             try:
                 particle_index = particles_out.pop()
             except:
-                count_add = len(b_particles_in)
                 self._add_particles(b_particles_in, b_particles)
                 break
             try:
                 b_particle_index = b_particles_in.pop()
             except:
-                count_delete = len(particles_out)
                 self._delete_particles(particles_out)
                 break
             

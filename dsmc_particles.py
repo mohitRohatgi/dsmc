@@ -149,8 +149,7 @@ class Gas:
 # for eg. species 1 would be stored in the first n1 particles the species2 for
 # the next n2 particles and so on.
 class Particles:
-    def __init__(self, n_particles, gas):
-        self.gas = gas
+    def __init__(self, n_particles):
         self.x = np.zeros(n_particles)
         self.y = np.zeros(n_particles)
         self.u = np.zeros(n_particles)
@@ -175,11 +174,11 @@ class Particles:
     
     # this function should only be called once.
     # sets the particles according to the molecules it represents.
-    def setup(self, domain_volume):
-        n_species = self.num * np.asarray(self.gas.mole_fraction)
+    def setup(self, domain_volume, mole_fraction, number_density, species, mpv):
+        n_species = self.num * np.asarray(mole_fraction)
         count = 0
-        self.n_eff = self.gas.number_density * domain_volume / self.num
-        for index, molecule in enumerate(self.gas.species):
+        self.n_eff = number_density * domain_volume / self.num
+        for index, molecule in enumerate(species):
             try:
                 end = n_species[index + 1]
             except:
@@ -192,15 +191,24 @@ class Particles:
             self.viscosity_coeff[count:end] = molecule.viscosity_coeff
             self.dof[count:end] = molecule.dof
             self.gamma[count:end] = molecule.gamma
-            self.mpv[count:end] = self.gas.mpv[index]
+            self.mpv[count:end] = mpv[index]
             self.tag[count:end] = index
             count += n_species[index]
+    
+    
+    def move_all(self, dt):
+        self.x += self.u * dt
+        self.y += self.v * dt
+    
+    
+    def move_sub(self, dt, particle_list):
+        for index in particle_list:
+            self.move(index, dt)
          
     
-    def move(self, dt, index_list):
-        for index in index_list:
-            self.x[index] += self.u[index] * dt
-            self.y[index] += self.v[index] * dt
+    def move(self, index, dt):
+        self.x[index] += self.u[index] * dt
+        self.y[index] += self.v[index] * dt
     
     
     def randomize_location(self):

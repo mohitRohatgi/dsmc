@@ -23,6 +23,10 @@ class CollisionManager:
         self.collider = Collider(self.particles)
     
     
+    def set_dt(self, dt):
+        self.dt = dt
+    
+    
     def add_collider_key(self, key, object_ref):
         self.collider.model[key] = object_ref
     

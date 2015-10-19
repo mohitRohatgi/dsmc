@@ -9,6 +9,149 @@ import numpy as np
 import dsmc_detector as dm_d
 
 
+
+class MovementManager:
+    def __init__(self, particles, surface, surface_temperature):
+        self.particles = particles
+        self.surface = surface
+        self.detector = dm_d.IntersectionDetector(surface)
+        self.reflector = Reflector(surface, particles, surface_temperature)
+    
+    def move_all(self, model_key, dt):
+        self._move_subset(0, len(self.particles.x) - 1, dt, model_key)
+    
+    def _move_subset(self, start, end, dt, model_key):
+        start, end = int(start), int(end)
+        if start == end:
+            self._reflect_n_move(start, dt, model_key)
+        else:
+            mid = int((start + end) / 2)
+            self._move_subset(start, mid, dt, model_key)
+            self._move_subset(mid + 1, end, dt, model_key)
+    
+    
+    def _reflect_n_move(self, particle_index, dt, model_key):
+        particle_index = int(particle_index)
+        point = (self.particles.x[particle_index], self.particles.y[particle_index])
+        u = self.particles.u[particle_index]
+        v = self.particles.v[particle_index]
+        if self.detector.detect_point(point, u, v, dt):
+            refl_surface = self.detector.get_surface_index()
+            intersect_time = self.detector.get_intersect_time()
+            por = self.detector.get_por()
+            self.reflector.reflect(particle_index, model_key, refl_surface, por)
+#            remaining_time = dt - intersect_time
+#            self._reflect_n_move(particle_index, remaining_time, model_key)
+        else:
+            self.particles.move(particle_index, dt)
+            
+            
+#            if (self.particles.x[particle_index] > 1.0 or self.particles.y[particle_index] > 1.0
+#            or self.particles.x[particle_index] < 0.0 or self.particles.y[particle_index] < 0.0):
+#                print "no reflection = ", particle_index, self.particles.x[particle_index], self.particles.y[particle_index]
+
+
+
+# por stands for the point of reflection of particle from the surface and is 
+# stored according to the index of the particle.
+class Reflector:
+    def __init__(self, surface, particles, surface_temperature):
+        self.surface = surface
+        self.particles = particles
+        self.surface_temperature = surface_temperature
+        self.model = {'specular' : Specular(surface, particles), 1 : Specular(
+                    surface, particles), 'diffuse' : Diffuse(surface, particles, 
+                    surface_temperature), 2 : Diffuse(surface, particles, 
+                    surface_temperature)}
+    
+    
+    def reflect(self, particle_out, model_key, refl_surface, por):
+        self.model[model_key].run(particle_out, refl_surface, por)
+    
+    
+    def add_key(self, key, object_ref):
+        self.model[key] = object_ref
+    
+    
+    def show_key(self):
+        for key in self.model:
+            print key
+
+
+
+# this class only changes the velocity and puts the particle at the por.
+# from por movement class would take care of movement part.
+class Specular:
+    def __init__(self, surface, particles):
+        self.surface = surface
+        self.particles = particles
+        self.normal_finder = dm_d.NormalFinder(surface)
+        self.surface_tangent = self.normal_finder.get__tangent()
+        self.refl_surface = 0
+    
+    
+    def run(self, particle_index, surface_index, por):
+        self._modify_vel(particle_index, surface_index)
+        self._modify_location(particle_index, por)
+    
+    
+    def _modify_vel(self, particle_index, surface_index):
+        dx = self.surface_tangent[surface_index][0]
+        dy = self.surface_tangent[surface_index][1]
+        v = self.particles.v[particle_index] * dy * dy
+        v -= self.particles.v[particle_index] * dx * dx
+        v += self.particles.u[particle_index] * dx * dy * 2.0
+        v /= (dx * dx + dy * dy)
+        u = self.particles.u[particle_index] * dx * dx
+        u -= self.particles.u[particle_index] * dy * dy
+        u += self.particles.v[particle_index] * dx * dy * 2.0
+        u /= dx * dx + dy * dy
+        self.particles.v[particle_index] = v
+        self.particles.u[particle_index] = u
+    
+    
+    def _modify_location(self, index, por):
+        self.particles.x[index] = por[0]
+        self.particles.y[index] = por[1]
+
+
+
+class Diffuse:
+    def __init__(self, surface, particles, surface_temperature):
+        self.surface = surface
+        self.particles = particles
+        self.surface_temperature = surface_temperature
+        self.dt = 0.0
+        self.particles_out = []
+        self.intersect_time = []
+        self.refl_surface = []
+        self.por = []
+    
+    
+    def run(self, particles_out, dt, model_key, intersect_time, refl_surface,
+            por):
+        self.dt = dt
+        self.particles_out = particles_out
+        self.intersect_time = intersect_time
+        self.refl_surface = refl_surface
+        self.por = por
+        self._diffuse_subset(0, len(self.particles_out) - 1)
+    
+    
+    def _diffuse_subset(self, start, end):
+        start, end = int(start), int(end)
+        if start == end:
+            self._specular(start)
+        else:
+            mid = int((start + end) / 2)
+            self._specular_subset(start, mid)
+            self._specular_subset(mid + 1, end)
+    
+    
+    def _diffuse(self, index):
+        pass
+
+
 # Reflector and Reflection_detector classes should be visible to this class.
 # for adding new model
 class ReflectionManager:
@@ -100,125 +243,3 @@ class ReflectionDetector:
         self.por = self.detector.get_por()
         self.refl_surface = self.detector.get_surface()
         self.particles_out = self.detector.get_points()
-
-
-
-# por stands for the point of reflection of particle from the surface and is 
-# stored according to the index of the particle.
-class Reflector:
-    def __init__(self, surface, particles, surface_temperature):
-        self.surface = surface
-        self.particles = particles
-        self.surface_temperature = surface_temperature
-        self.model = {'specular' : Specular(surface, particles), 1 : Specular(
-                    surface, particles), 'diffuse' : Diffuse(surface, particles, 
-                    surface_temperature), 2 : Diffuse(surface, particles, 
-                    surface_temperature)}
-    
-    
-    def run(self, particles_out, dt, model_key, intersect_time, refl_surface,
-            por):
-        self.model[model_key].run(particles_out, dt, intersect_time, 
-                                  refl_surface, por)
-    
-    
-    def add_key(self, key, object_ref):
-        self.model[key] = object_ref
-    
-    
-    def show_key(self):
-        for key in self.model:
-            print key
-
-
-
-class Specular:
-    def __init__(self, surface, particles):
-        self.surface = surface
-        self.particles = particles
-        self.dt = 0.0
-        self.locator = dm_d.SurfaceLocator(surface)
-        self.surface_slope = self.locator.get_slope()
-        self.particles_out = []
-        self.intersect_time = []
-        self.refl_surface = []
-        self.por = []
-    
-    
-    def run(self, particles_out, dt, intersect_time, refl_surface, por):
-        self.dt = dt
-        self.particles_out = particles_out
-        self.intersect_time = intersect_time
-        self.refl_surface = refl_surface
-        self.por = por
-        self._specular_subset(0, len(self.particles_out) - 1)
-    
-    
-    def _specular_subset(self, start, end):
-        start, end = int(start), int(end)
-        if start == end:
-            self._specular(start)
-        else:
-            mid = int((start + end) / 2)
-            self._specular_subset(start, mid)
-            self._specular_subset(mid + 1, end)
-    
-    
-    def _specular(self, index):
-        self._modify_vel(index)
-        self._modify_location(index)
-    
-    
-    def _modify_vel(self, index):
-        tan = self.surface_slope[self.refl_surface[index]]
-        u = 2.0 * self.particles.v[index] * tan
-        u += self.particles.u[index] * (1.0 - tan * tan)
-        u /= (1 + tan * tan)
-        v = 2.0 * self.particles.u[index] * tan
-        v += self.particles.v[index] * (1.0 - tan * tan)
-        v /= (1 + tan * tan)
-        self.particles.u[index] = u
-        self.particles.v[index] = v
-    
-    
-    def _modify_location(self, index):
-        dt = self.dt - self.intersect_time[index]
-        self.particles.x[index] = self.por[index][0] + self.particles.u[index] * dt
-        self.particles.y[index] = self.por[index][1] + self.particles.v[index] * dt
-
-
-
-class Diffuse:
-    def __init__(self, surface, particles, surface_temperature):
-        self.surface = surface
-        self.particles = particles
-        self.surface_temperature = surface_temperature
-        self.dt = 0.0
-        self.particles_out = []
-        self.intersect_time = []
-        self.refl_surface = []
-        self.por = []
-    
-    
-    def run(self, particles_out, dt, model_key, intersect_time, refl_surface,
-            por):
-        self.dt = dt
-        self.particles_out = particles_out
-        self.intersect_time = intersect_time
-        self.refl_surface = refl_surface
-        self.por = por
-        self._diffuse_subset(0, len(self.particles_out) - 1)
-    
-    
-    def _diffuse_subset(self, start, end):
-        start, end = int(start), int(end)
-        if start == end:
-            self._specular(start)
-        else:
-            mid = int((start + end) / 2)
-            self._specular_subset(start, mid)
-            self._specular_subset(mid + 1, end)
-    
-    
-    def _diffuse(self, index):
-        pass
