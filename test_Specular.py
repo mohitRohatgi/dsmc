@@ -120,6 +120,17 @@ class TestSpecular(unittest.TestCase):
             specular.run(index, 0, por)
             self.assertTrue(particles.v[index] == 0.0)
             self.assertTrue(particles.u[index] == 2.0)
+        
+        surface = ((0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0), (0.0, 0.0))
+        particles.x[0] = 0.53518289225500093
+        particles.y[0] = 0.99967784164144602
+        particles.u[0] = 65.12334130538774
+        particles.v[0] = 141.06527432325359
+        specular.__init__(surface, particles)
+        por = (particles.x[index], particles.x[index])
+        specular.run(0, 1, por)
+        self.assertTrue(particles.v[0] == -141.06527432325359)
+        self.assertTrue(particles.u[0] == 65.12334130538774)
     
     
     def test_neg_45_degree_line_2(self):

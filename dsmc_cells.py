@@ -118,17 +118,24 @@ class Distributor:
         self.reset_particles_inside()
 #        print "n_cells = ", len(self.cells.xc) * len(self.cells.yc)
         for index in range(len(self.particles.x)):
-            y = self.particles.x[index] - 0.2
-            if (y > self.particles.y[index]):
-                vel = (self.particles.u[index], self.particles.v[index])
-                loc = (self.particles.x[index] - vel[0] * 1e-5,
-                       self.particles.y[index] - vel[1] * 1e-5)
-                if (loc[1] + 0.2 < loc[0] or loc[0] < 0.0 or loc[1] < 0.0 or 
-                    loc[0] > 1.0 or loc[1] > 1.0):
-                    flag = True
-                else:
-                    flag = False
-                print "not reflected index loc vel flag  = ", index, loc, vel, flag
+            vel = (self.particles.u[index], self.particles.v[index])
+            loc = (self.particles.x[index] - vel[0] * 1e-5,
+                   self.particles.y[index] - vel[1] * 1e-5)
+            current_loc = ( self.particles.x[index], self.particles.y[index])
+#            y = self.particles.x[index] - 0.2
+#            if (y > self.particles.y[index]):
+#                vel = (self.particles.u[index], self.particles.v[index])
+#                loc = (self.particles.x[index] - vel[0] * 1e-5,
+#                       self.particles.y[index] - vel[1] * 1e-5)
+#                if (loc[1] + 0.2 < loc[0] or loc[0] < 0.0 or loc[1] < 0.0 or 
+#                    loc[0] > 1.0 or loc[1] > 1.0):
+#                    flag = True
+#                else:
+#                    flag = False
+#                print "not reflected index loc vel flag  = ", index, loc, vel, flag
+            if (self.particles.x[index] < 0.0 or self.particles.y[index] < 0.0
+            or self.particles.x[index] > 1.0 or self.particles.y[index] > 1.0):
+                print "index not detected = ", index, loc, vel, current_loc
             cell_index = self.cells.find_cell_index(self.particles.x[index], 
                                                     self.particles.y[index])
 #           print "cell_index = ", cell_index, index

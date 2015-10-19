@@ -261,20 +261,18 @@ class IntersectionDetector:
         start, end = int(start), int(end)
         if start == end:
             por = self._find_por(point, u, v, start)
-            print "por = ", por 
             if por == None and self.por == None:
                 return False
-#            elif (np.sqrt((por[0] - point[0]) ** 2.0 + 
-#                        (por[1] - point[1]) ** 2.0) < 1e-6):
-#                self.intersect_time = 0.0
-#                self.por = por
-#                self.surface_index = start
+            elif (np.sqrt((por[0] - point[0]) ** 2.0 + 
+                        (por[1] - point[1]) ** 2.0) < 1e-6):
+                self.intersect_time = 0.0
+                self.por = por
+                self.surface_index = start
 #                print "yes"
-#                return True
+                return True
             else:
                 intersect_time = self._find_intersect_time(point, u, v, por)
-                print "intersect time = ", intersect_time
-                if intersect_time >= -1.0e-3 * self.dt:
+                if intersect_time >= 0.0:
                     if intersect_time <= self.dt:
                         self._set_data(por, intersect_time, start)
                         return True

@@ -30,6 +30,8 @@ class MovementManager:
             self._move_subset(mid + 1, end, dt, model_key)
     
     
+    # this function checks if the particle would reflect and correspondingly
+    # would either reflect or move the particle.
     def _reflect_n_move(self, particle_index, dt, model_key):
         particle_index = int(particle_index)
         point = (self.particles.x[particle_index], self.particles.y[particle_index])
@@ -38,10 +40,21 @@ class MovementManager:
         if self.detector.detect_point(point, u, v, dt):
             refl_surface = self.detector.get_surface_index()
             intersect_time = self.detector.get_intersect_time()
-            por = self.detector.get_por()
-            self.reflector.reflect(particle_index, model_key, refl_surface, por)
-#            remaining_time = dt - intersect_time
-#            self._reflect_n_move(particle_index, remaining_time, model_key)
+            if (intersect_time <= 0.0 or intersect_time > dt):
+                self.particles.move(particle_index, dt)
+                
+                
+                if (self.particles.x[particle_index] < 0.0 or self.particles.y[particle_index] < 0.0
+            or self.particles.x[particle_index] > 1.0 or self.particles.y[particle_index] > 1.0):
+                    print "index not detected por = ", self.detector.get_por(), self.detector.get_surface_index()
+#            elif (intersect_time == dt):
+#                por = self.detector.get_por()
+#                self.reflector.reflect(particle_index, model_key, refl_surface, por)
+            else:
+                por = self.detector.get_por()
+                self.reflector.reflect(particle_index, model_key, refl_surface, por)
+                remaining_time = dt - intersect_time
+                self._reflect_n_move(particle_index, remaining_time, model_key)
         else:
             self.particles.move(particle_index, dt)
             

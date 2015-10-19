@@ -107,12 +107,19 @@ class TestIntersectionDetector(unittest.TestCase):
         surface = [(0.2, 0.0), (1.0, 0.8)]
         detector = dm_d.IntersectionDetector(surface)
         self.assertTrue(detector.detect_point(point, vel[0], vel[1], 1.0e-5))
+        
+        point = (0.82319447822331415, 0.99963676235754495)
+        vel = (271.97790864799919, 414.41783401180476)
+        surface = [(0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0), (0.0, 0.0)]
+        detector = dm_d.IntersectionDetector(surface)
+        self.assertTrue(detector.detect_point(point, vel[0], vel[1], 1.0e-5))
 
 
 if __name__ == '__main__':
     unittest.main()
 
 #checked
+# (0.82319447822331415, 0.99963676235754495) (271.97790864799919, 414.41783401180476)
 # (0.88018521325675159, 0.68087403676204228) (92.480485409376826, 23.598134880295735)
 # (0.93106813984527659, 0.88285720661444866) (6751.7010953089721, -8427.2055816082375)
 #(0.15639635794227405, 0.22414708673128031) (11636.452923094244, -15138.619955806384)
