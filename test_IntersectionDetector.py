@@ -102,18 +102,22 @@ class TestIntersectionDetector(unittest.TestCase):
                 self.assertAlmostEqual(por[0], 1.0, 5)
                 self.assertAlmostEqual(intersect_time, 0.8, 5)
                 self.assertEqual(surface_index, 0)
+    
+    
+    def test_wedge_surface(self):
         point = (0.88018521325675159, 0.68087403676204228)
         vel = (92.480485409376826, 23.598134880295735)
         surface = [(0.2, 0.0), (1.0, 0.8)]
         detector = dm_d.IntersectionDetector(surface)
         self.assertTrue(detector.detect_point(point, vel[0], vel[1], 1.0e-5))
-        
-        point = (0.82319447822331415, 0.99963676235754495)
-        vel = (271.97790864799919, 414.41783401180476)
+    
+    
+    def test_box(self):
+        point = (0.0, 0.26082442984289667)
+        vel = (-356.44993069494706, -110.17505903656894)
         surface = [(0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0), (0.0, 0.0)]
         detector = dm_d.IntersectionDetector(surface)
         self.assertTrue(detector.detect_point(point, vel[0], vel[1], 1.0e-5))
-
 
 if __name__ == '__main__':
     unittest.main()

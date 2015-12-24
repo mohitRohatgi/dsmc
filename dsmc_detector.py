@@ -8,16 +8,153 @@ Created on Sun Sep 27 14:48:54 2015
 import numpy as np
 
 
-class NormalFinder:
+# this checks whether the particular particle would intersect with the surface.
+# If it intersects, it stores the por, intersecting time and the index of the
+# surface it gets reflected from. 
+class IntersectionDetector:
     def __init__(self, surface):
         self.surface = surface
-        self.surface_normal = []
+        self.dt = 0.0
+        self.tangent_finder = TangentFinder(surface)
+        self.surface_tangent = self.tangent_finder.get__tangent()
+        self.surface_index = None
+        self.intersect_time = None
+        self.por = None
+        self.FUZZ = 1.0e-6
+        self.FUZZ_SQ = self.FUZZ * self.FUZZ
+    
+    
+    def get_intersect_time(self):
+        return self.intersect_time
+    
+    
+    def get_por(self):
+        return self.por
+    
+    
+    def get_surface_index(self):
+        return self.surface_index
+    
+    
+    def detect_point(self, point, u, v, dt):
+        self.dt = dt
+        self.intersect_time = None
+        self.por = None
+        self.surface_index = None
+        if (self._detect_point(point, u, v, 0, len(self.surface) - 2)):
+            return True
+        else:
+            return False
+    
+    
+    # por represents the por of the particle and surface being considered while
+    # self.por is the surface it would reflect after checking with all the surfaces.
+    def _detect_point(self, point, u, v, start, end):
+        start, end = int(start), int(end)
+        if start == end:
+            por = self._find_por(point, u, v, start)
+            # checking for parallelism and finite line segment case.
+            if por == None:
+                return False
+            else:
+                intersect_time = self._find_intersect_time(point, u, v, por)
+                # checking if intersect time gets negative signifying no
+                # intersection of particle trajectory and surface.
+                if intersect_time < 0.0:
+                    return False
+                # accounting for the fuzz
+                elif self._nearby(point, start):
+                    return True
+                elif intersect_time <= self.dt:
+                    return self._set_data(por, intersect_time, start)
+                else:
+                    return False
+        else:
+            mid = int((start + end) / 2)
+            truthValue1 = self._detect_point(point, u, v, start, mid)
+            truthValue2 = self._detect_point(point, u, v, mid + 1, end)
+            if truthValue1 or truthValue2:
+                return True
+            else:
+                return False
+    
+    
+    # this function checks if particle is inside the fuzz area considered to
+    # account for floating point no.
+    def _nearby(self, point, index):
+        t = self._find_t(point, index)
+        dx = self.surface[index][0] - point[0] + t * self.surface_tangent[index][0]
+        dy = self.surface[index][1] - point[1] + t * self.surface_tangent[index][1]
+        ds = dx * dx + dy * dy
+        if (ds <= self.FUZZ_SQ):
+            por = (self.surface[index][0] + t * self.surface_tangent[index][0], 
+                        self.surface[index][1] + t * self.surface_tangent[index][1])
+            return self._set_data(por, self.FUZZ * 1.0e-3, index)
+        else:
+            return False
+    
+    
+    # this function is a helper function for the _nearby function above.
+    # it finds the parameter to define the point which is perpendicular to particle
+    # and lies on the surface. Using this parameter length of perpendicular is
+    # found.
+    def _find_t(self, point, index):
+        t = (point[0] - self.surface[index][0]) * self.surface_tangent[index][0]
+        t += (point[1] - self.surface[index][1]) * self.surface_tangent[index][1]
+        t /= (self.surface_tangent[index][0] ** 2.0 + 
+                        self.surface_tangent[index][1] ** 2.0)
+        
+        return t
+    
+    
+    # por = None means that the particle would not intersect.
+    # finite line segment case has also been considered here.
+    def _find_por(self, point, u, v, index):
+        constt = self.surface_tangent[index]
+        constt = constt[1] * u - v * constt[0]
+        # parallelism case
+        if constt == 0.0:
+            return None
+        else:
+            t = u * point[1] + v * (self.surface[index][0] - point[0])
+            t -= u * self.surface[index][1]
+            t /= constt
+            # finite line segment case.
+            if (t < -self.FUZZ or t > (1 + self.FUZZ)):
+                return None
+            x = self.surface[index][0] + t * self.surface_tangent[index][0]
+            y = self.surface[index][1] + t * self.surface_tangent[index][1]
+            return (x, y)
+    
+    
+    # this function would give the intersection time.
+    def _find_intersect_time(self, point, u, v, por):
+        vel = np.sqrt(u ** 2.0 + v ** 2.0)
+        dx, dy = por[0] - point[0], por[1] - point[1]
+        dt =  (u * dx + v * dy) / vel / vel
+        return dt
+    
+    
+    # this function would check if the intersection time is less than the minimum
+    # intersection time detected uptill now. Depending upon which it would 
+    # modify the minimum intersection time. If modified would return True
+    # signifying a surface having lesser intersection time is detected.
+    def _set_data(self, por, intersect_time, surface_index):
+        if intersect_time < self.intersect_time or self.intersect_time == None:
+            self.intersect_time = intersect_time
+            self.por = por
+            self.surface_index = surface_index
+            return True
+        else:
+            return False
+
+
+
+class TangentFinder:
+    def __init__(self, surface):
+        self.surface = surface
         self.surface_tangent = []
         self._find_all()
-    
-    
-    def get_normal(self):
-        return self.surface_normal
     
     
     def get__tangent(self):
@@ -33,12 +170,8 @@ class NormalFinder:
         if start == end:
             dx = self.surface[start + 1][0] - self.surface[start][0]
             dy = self.surface[start + 1][1] - self.surface[start][1]
-            ds = np.sqrt(dx * dx + dy * dy)
-            dx /= ds
-            dy /= ds
-            normal = (-dy, dx)
+            
             tangent = (dx, dy)
-            self.surface_normal.append(normal)
             self.surface_tangent.append(tangent)
         else:
             mid = int((start + end) / 2)
@@ -215,110 +348,3 @@ class PointDetector:
                 return -1
             else:
                 return 1
-
-
-
-# this checks whether the particular particle would intersect with the surface.
-# If it intersects, it stores the por, intersecting time and the index of the
-# surface it gets reflected from. 
-class IntersectionDetector:
-    def __init__(self, surface):
-        self.surface = surface
-        self.dt = 0.0
-        self.normal_finder = NormalFinder(surface)
-        self.surface_tangent = self.normal_finder.get__tangent()
-        self.surface_index = None
-        self.intersect_time = None
-        self.por = None
-    
-    
-    def get_intersect_time(self):
-        return self.intersect_time
-    
-    
-    def get_por(self):
-        return self.por
-    
-    
-    def get_surface_index(self):
-        return self.surface_index
-    
-    
-    def detect_point(self, point, u, v, dt):
-        self.dt = dt
-        self.intersect_time = None
-        self.por = None
-        self.surface_index = None
-        if (self._detect_point(point, u, v, 0, len(self.surface) - 2)):
-            return True
-        else:
-            return False
-    
-    
-    # por represents the por of the particle and surface being considered while
-    # self.por is the surface it would reflect after checking with all the surfaces.
-    def _detect_point(self, point, u, v, start, end):
-        start, end = int(start), int(end)
-        if start == end:
-            por = self._find_por(point, u, v, start)
-            if por == None and self.por == None:
-                return False
-            elif (np.sqrt((por[0] - point[0]) ** 2.0 + 
-                        (por[1] - point[1]) ** 2.0) < 1e-6):
-                self.intersect_time = 0.0
-                self.por = por
-                self.surface_index = start
-#                print "yes"
-                return True
-            else:
-                intersect_time = self._find_intersect_time(point, u, v, por)
-                if intersect_time >= 0.0:
-                    if intersect_time <= self.dt:
-                        self._set_data(por, intersect_time, start)
-                        return True
-                    elif np.abs(intersect_time - self.dt) < self.dt * 1.0e-2:
-                        self.por = por
-                        self.intersect_time = self.dt * (0.99)
-                        self.surface_index = start
-                        return True
-                    else:
-                        return False
-                else:
-                    return False
-        else:
-            mid = int((start + end) / 2)
-            truthValue1 = self._detect_point(point, u, v, start, mid)
-            truthValue2 = self._detect_point(point, u, v, mid + 1, end)
-            if truthValue1 or truthValue2:
-                return True
-            else:
-                return False
-    
-    
-    # por = None means that the particle is moving parallel to surface.
-    def _find_por(self, point, u, v, index):
-        constt = self.surface_tangent[index]
-        constt = constt[1] * u - v * constt[0]
-        if constt == 0.0:
-            return None
-        else:
-            t = u * point[1] + v * (self.surface[index][0] - point[0])
-            t -= u * self.surface[index][1]
-            t /= constt
-            x = self.surface[index][0] + t * self.surface_tangent[index][0]
-            y = self.surface[index][1] + t * self.surface_tangent[index][1]
-            return (x, y)
-    
-    
-    def _find_intersect_time(self, point, u, v, por):
-        vel = np.sqrt(u ** 2.0 + v ** 2.0)
-        dx, dy = por[0] - point[0], por[1] - point[1]
-        dt =  (u * dx + v * dy) / vel / vel
-        return dt
-    
-    
-    def _set_data(self, por, intersect_time, surface_index):
-        if intersect_time < self.intersect_time or self.intersect_time == None:
-            self.intersect_time = intersect_time
-            self.por = por
-            self.surface_index = surface_index

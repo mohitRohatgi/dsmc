@@ -113,10 +113,10 @@ class TestMovementManager(unittest.TestCase):
         
         
         for index in range(100):
-            self.assertAlmostEqual(particles.u[index], 1.0, 4)
-            self.assertAlmostEqual(particles.v[index], 1.0, 4)
-            self.assertAlmostEqual(particles.x[index], 5.0, 4)
-            self.assertAlmostEqual(particles.y[index], 2.0 - y[index], 4)
+            self.assertAlmostEqual(particles.u[index], 1.0, 6)
+            self.assertAlmostEqual(particles.v[index], 1.0, 6)
+            self.assertAlmostEqual(particles.x[index], 5.0, 6)
+            self.assertAlmostEqual(particles.y[index], 2.0 - y[index], 6)
     
     
     def test_concave_hor_ver_line2(self):
@@ -125,7 +125,7 @@ class TestMovementManager(unittest.TestCase):
         y = np.linspace(0.0, 4.0, 100)
         
         particles.y = np.linspace(0.0, 4.0, 100)
-        particles.x = np.ones(100, dtype=float) * -0.9
+        particles.x = np.ones(100, dtype=float) * 1.0
         particles.u = np.ones(100, dtype=float) * -1.0
         particles.v = np.ones(100, dtype=float) * -1.0
         
@@ -135,19 +135,19 @@ class TestMovementManager(unittest.TestCase):
         
         
         for index in range(100):
-            self.assertAlmostEqual(particles.u[index], 1.0, 4)
-            self.assertAlmostEqual(particles.v[index], 1.0, 4)
-            self.assertAlmostEqual(particles.x[index], 6.9, 4)
-            self.assertAlmostEqual(particles.y[index], 2.0 - y[index], 4)
+            self.assertAlmostEqual(particles.x[index], 5.0, 6)
+            self.assertAlmostEqual(particles.y[index], 2.0 - y[index], 6)
+            self.assertAlmostEqual(particles.u[index], 1.0, 6)
+            self.assertAlmostEqual(particles.v[index], 1.0, 6)
     
     
     def test_concave_hor_ver_line3(self):
         particles = dm_p.Particles(100)
         surface = [(-1.0, 2.0), (-1.0, -3.0), (4.0, -3.0)]
-        y = np.linspace(0.0, 4.0, 100)
+        y = np.linspace(0.0, 2.0, 100)
         
-        particles.y = np.linspace(0.0, 4.0, 100)
-        particles.x = np.ones(100, dtype=float) * -1.0
+        particles.y = np.linspace(0.0, 2.0, 100)
+        particles.x = np.ones(100, dtype=float) * -0.999999999999999
         particles.u = np.ones(100, dtype=float) * -1.0
         particles.v = np.ones(100, dtype=float) * -1.0
         
@@ -155,13 +155,16 @@ class TestMovementManager(unittest.TestCase):
         movement_manager.move_all(1, 8.0)
         
         print particles.x, particles.u, y
-        print particles.y, particles.v
         
         for index in range(100):
-            self.assertAlmostEqual(particles.u[index], 1.0, 4)
-            self.assertAlmostEqual(particles.v[index], 1.0, 4)
-            self.assertAlmostEqual(particles.x[index], 7.0, 4)
-            self.assertAlmostEqual(particles.y[index], 2.0 - y[index], 4)
+            self.assertAlmostEqual(particles.x[index], 7.0, 6)
+            self.assertAlmostEqual(particles.y[index], 2.0 - y[index], 6)
+            self.assertAlmostEqual(particles.u[index], 1.0, 6)
+            self.assertAlmostEqual(particles.v[index], 1.0, 6)
+    
+    
+    def test_concave_cup(self):
+        pass
 
 
 

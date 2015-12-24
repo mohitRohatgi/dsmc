@@ -120,17 +120,21 @@ class TestSpecular(unittest.TestCase):
             specular.run(index, 0, por)
             self.assertTrue(particles.v[index] == 0.0)
             self.assertTrue(particles.u[index] == 2.0)
-        
+    
+    
+    def test_box(self):
         surface = ((0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0), (0.0, 0.0))
-        particles.x[0] = 0.53518289225500093
-        particles.y[0] = 0.99967784164144602
-        particles.u[0] = 65.12334130538774
-        particles.v[0] = 141.06527432325359
+        particles = dm_p.Particles(100)
+        specular = dm_r.Specular(surface, particles)
+        particles.x[0] = 0.0
+        particles.y[0] = 0.26082442984289667
+        particles.u[0] = -356.44993069494706
+        particles.v[0] = -110.17505903656894
         specular.__init__(surface, particles)
-        por = (particles.x[index], particles.x[index])
-        specular.run(0, 1, por)
-        self.assertTrue(particles.v[0] == -141.06527432325359)
-        self.assertTrue(particles.u[0] == 65.12334130538774)
+        por = (0.0, 0.26082442984289667)
+        specular.run(0, 0, por)
+        self.assertAlmostEqual(particles.u[0], 356.44993069494706, 5)
+        self.assertAlmostEqual(particles.v[0], -110.17505903656894, 5)
     
     
     def test_neg_45_degree_line_2(self):

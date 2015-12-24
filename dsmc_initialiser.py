@@ -39,25 +39,27 @@ class ParticleInitialiser:
     
     
     def _initialise_cells(self):
-        c = np.sqrt(self.gas.temperature * self.gas.gamma * 8.314)
-        for index1, cell_index in enumerate(self.cells_in):
-            self.cells.temperature[cell_index] = self.gas.temperature
-            self.cells.number_density[cell_index] = (
-               float(self.n_particles_in_cell) / self.cells.volume[cell_index])
+        c = np.sqrt(self.gas.get_temperature() * self.gas.get_gamma() * 8.314)
+        
+        n_particles = (self.n_particles_in_cell * np.array(self.gas.get_mol_frac()))
+        
+        for index in self.cells_in:
+            self.cells.temperature[index] = self.gas.get_temperature()
             
-            for tag in range(len(self.gas.species)):
-                self.cells.n_species[cell_index][tag] = (
-                  round(self.n_particles_in_cell* self.gas.mole_fraction[tag]))
+            for tag in range(len(self.gas.get_species())):
+                self.cells.n_particles[tag][index] = n_particles[tag]
             
-            self.cells.u[cell_index] = self.gas.mach_x * c
-            self.cells.v[cell_index] = self.gas.mach_y * c
+            self.cells.u[index] = self.gas.get_mach_x() * c
+            self.cells.v[index] = self.gas.get_mach_y() * c
+        
     
     
     # c is the speed of sound.
     def _initialise_velocity(self, mpv):
         mpv = mpv
         k = 1.3806488e-23
-        c = np.sqrt(self.gas.gamma * self.gas.temperature * k / self.gas.mass)
+        c = np.sqrt(self.gas.get_gamma() * self.gas.get_temperature() * k / 
+            self.gas.get_mass())
         c1 = np.random.normal(0.0, 0.5, self.particles.num)
         c2 = np.random.normal(0.0, 0.5, self.particles.num)
         c3 = np.random.normal(0.0, 0.5, self.particles.num)
@@ -65,9 +67,9 @@ class ParticleInitialiser:
         self.particles.v = c2 * mpv
         self.particles.w = c3 * mpv
         
-        self.particles.u += self.gas.mach_x * c
-        self.particles.v += self.gas.mach_y * c
-        self.particles.w += self.gas.mach_z * c
+        self.particles.u += self.gas.get_mach_x() * c
+        self.particles.v += self.gas.get_mach_y() * c
+        self.particles.w += self.gas.get_mach_z() * c
 
 
 
@@ -92,14 +94,15 @@ class Initialiser:
         cell_detector = CellDetector(cells, domain.surface, ref_point)
         cells_in = cell_detector.detect_all()
         particles = dm_p.Particles(n_particles_in_cell * len(cells_in))
-        particles.setup(domain.volume, gas.mole_fraction, gas.number_density,
-                             gas.species, gas.mpv)
+        particles.setup(domain.volume, gas.get_mol_frac(), gas.get_number_density(),
+                             gas.get_species(), gas.get_mpv())
         particle_initialiser = ParticleInitialiser(particles, cells, cells_in,
                                                      n_particles_in_cell, gas)
         particle_initialiser.run()
         distributor = dm_c.Distributor(cells, particles)
         distributor.distribute_all_particles()
-        sampler = dm_s.Instant_sampler(cells, cells_in, particles, gas)
+        sampler = dm_s.Instant_sampler(cells, cells_in, particles, 
+                                       gas.get_n_species())
         sampler.run()
 #        print cells.temperature
         return [particles, cells_in]

@@ -19,7 +19,7 @@ import numpy as np
 # particle inside is a list of particles inside. For, e.g., 1st element
 # would contain list particles inside 1st cell and so on.
 class RectCells:
-    def __init__(self, n_x, n_y, length, width, centre, gas):
+    def __init__(self, n_x, n_y, length, width, centre, n_species):
         """ 
         just storing the x values in xc at y = 0 and y values in yc 
         at x = 0.
@@ -33,19 +33,19 @@ class RectCells:
         self.width = np.ones(n_cells) * width / self.n_y
         self.volume = np.ones(n_cells) * self.length * self.width
         self.particles_inside = [[] for i in range(n_cells)]
-        self.pressure = np.zeros(n_cells)
         self.u = np.zeros(n_cells)
         self.v = np.zeros(n_cells)
         self.w = np.zeros(n_cells)
         self.mass = np.zeros(n_cells)
-        self.number_density = np.zeros(n_cells)
-        # n_species gives the no. of particles of different species
-        self.n_species = np.zeros((n_cells, len(gas.species)), dtype = int)
-        self.mach = np.zeros(n_cells)
-        self.density = np.zeros(n_cells)
+        self.number_density = np.zeros((n_species, n_cells), dtype=float)
+        # n_particles gives the no. of particles of each species at each cell
+        # for e.g. no. of particles of species of tag 1 at cell 0 can be localized by
+        # self.n_particles[0][0]
+        self.n_particles = np.zeros((n_species, n_cells), dtype = int)
         self.temperature = np.zeros(n_cells)
-        self.gas_temperature = np.zeros((n_cells, len(gas.species)))
+        self.gas_temperature = np.zeros((n_cells, n_species))
         self._find_cell_location(centre, length, width)
+        self.n_species = n_species
     
     
     # this function returns the array of locations of the cells.
@@ -94,6 +94,13 @@ class RectCells:
         
         for i in range(self.n_y):
             self.yc[i] = y_lower_left +  self.width[0] * i
+        
+    
+    # this function would reset the particles inside attribute of cells.
+    def reset_particles(self):
+        n_cells = self.n_x * self.n_y
+        self.n_particles = np.zeros((self.n_species, n_cells), dtype = int)
+        self.particles_inside = [[] for i in range(n_cells)]
 
 
 
@@ -115,7 +122,7 @@ class Distributor:
     # this function distributes particle in a rectangular cell.
     # assumption: particles are inside the domain
     def distribute_all_particles(self):
-        self.reset_particles_inside()
+        self.cells.reset_particles()
 #        print "n_cells = ", len(self.cells.xc) * len(self.cells.yc)
         for index in range(len(self.particles.x)):
             vel = (self.particles.u[index], self.particles.v[index])
@@ -135,7 +142,7 @@ class Distributor:
 #                print "not reflected index loc vel flag  = ", index, loc, vel, flag
             if (self.particles.x[index] < 0.0 or self.particles.y[index] < 0.0
             or self.particles.x[index] > 1.0 or self.particles.y[index] > 1.0):
-                print "index not detected = ", index, loc, vel, current_loc
+                print "index loc vel cuurent_loc = ", index, loc, vel, current_loc
             cell_index = self.cells.find_cell_index(self.particles.x[index], 
                                                     self.particles.y[index])
 #           print "cell_index = ", cell_index, index
@@ -143,14 +150,6 @@ class Distributor:
 #           print "particle_y = ", self.particles.y[index]
             self.cells.particles_inside[cell_index].append(index)
             tag = self.particles.tag[index]
-            self.cells.n_species[cell_index][tag] += 1
-        
-    
-    # after every time step this function needs to be called.
-    def reset_particles_inside(self):
-        n_cells = self.cells.n_x * self.cells.n_y
-        n_species = len(self.cells.gas_temperature[0])
-        self.cells.n_species = np.zeros((n_cells, n_species), dtype = int)
-        for i in range (n_cells):
-            self.cells.particles_inside[i] = []
+#            print tag, cell_index
+            self.cells.n_particles[tag][cell_index] += 1
             

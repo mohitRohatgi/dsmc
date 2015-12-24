@@ -22,42 +22,78 @@ class Domain:
 
 
 class Molecules:
-    def __init__(self, dia, viscosity_index, mass, viscosity_coeff, dof, tag,
-              ref_temperature, gamma, volume, number_density):
+    def __init__(self, dia, visc_index, mass, visc_coeff, dof, tag,
+              ref_temp, gamma, volume, number_density):
         self.dia = dia
         self.number_density = number_density
-        self.viscosity_index = viscosity_index
+        self.visc_index = visc_index
         self.mass = mass
-        self.viscosity_coeff = viscosity_coeff
+        self.visc_coeff = visc_coeff
         self.dof = dof
         self.tag = tag
-        self.ref_temperature = ref_temperature
+        self.ref_temp = ref_temp
         self.gamma = gamma
         self.volume = volume
+    
+    
+    def get_dia(self):
+        return self.dia
+    
+    
+    def get_visc_index(self):
+        return self.visc_index
+    
+    
+    def get_ref_temp(self):
+        return self.ref_temp
+    
+    
+    def get_tag(self):
+        return self.tag
+    
+    
+    def get_number_density(self):
+        return self.number_density
+    
+    
+    def get_gamma(self):
+        return self.gamma
+    
+    
+    def get_mass(self):
+        return self.mass
+    
+    
+    def get_dof(self):
+        return self.dof
+    
+    
+    def get_visc_coeff(self):
+        return self.visc_coeff
 
 
 
-# mole_fraction should be wraapped up in a list.
+# mol_frac should be wraapped up in a list.
+# species should organised in ascending order w.r.t. tag.
+# species represents the list of molecules.
 class Gas:
-    def __init__(self, species, mole_fraction, mach, temperature):
+    def __init__(self, species, mol_frac, mach, temperature):
         self.species = species
-        self.mole_fraction = mole_fraction
+        self.mol_frac = mol_frac
         self.number_density = 0.0
-        self.mach_x = mach[0]
-        self.mach_y = mach[1]
-        self.mach_z = mach[2]
+        self.mach = mach
         self.temperature = temperature
         #using tag in substitue of finding length of the array.
-        constt = ((species[-1].tag + 2) * (species[-1].tag + 1)) / 2
-        self.mean_f_path = np.zeros(species[-1].tag + 1)
-        self.mean_col_time = np.zeros(species[-1].tag + 1)
+        constt = ((species[-1].get_tag() + 2) * (species[-1].get_tag() + 1)) / 2
+        self.mean_f_path = np.zeros(species[-1].get_tag() + 1)
+        self.mean_col_time = np.zeros(species[-1].get_tag() + 1)
         self.mean_col_rate = np.zeros(constt)
         self.col_density_rate = np.zeros(constt)
         self.dia = np.zeros(constt)
-        self.ref_temperature = np.zeros(constt)
+        self.ref_temp = np.zeros(constt)
         self.mpv = np.zeros(len(species))
         self.reduced_mass = 0.0
-        self.viscosity_index = np.zeros(constt)
+        self.visc_index = np.zeros(constt)
         self.gamma = 0.0
         self.mass = 0.0
     
@@ -68,10 +104,57 @@ class Gas:
         self._find_col_property()
     
     
+    def get_mass(self):
+        return self.mass
+    
+    
+    def get_number_density(self):
+        return self.number_density
+    
+    
+    def get_temperature(self):
+        return self.temperature
+    
+    
+    def get_mol_frac(self):
+        return self.mol_frac
+    
+    
+    def get_species(self):
+        return self.species
+    
+    
+    def get_n_species(self):
+        return len(self.species)
+    
+    
+    def get_reduced_mass(self):
+        return self.reduced_mass
+    
+    
+    def get_mach_x(self):
+        return self.mach[0]
+    
+    
+    def get_mach_y(self):
+        return self.mach[1]
+    
+    
+    def get_mach_z(self):
+        return self.mach[2]
+    
+    
+    def get_gamma(self):
+        return self.gamma
+    
+    
+    def get_mpv(self):
+        return self.mpv
+    
+    
     def _find_number_density(self):
-        self.number_density = 0.0
         for index, species in enumerate(self.species):
-            self.number_density += species.number_density
+            self.number_density += species.get_number_density()
     
     
     def _find_gas_property(self):
@@ -81,17 +164,17 @@ class Gas:
         count = 0.0
         k = 1.3806488e-23
         for index,species in enumerate(self.species):
-            self.gamma += species.gamma * self.mole_fraction[index]
-            self.mass += species.mass * self.mole_fraction[index]
+            self.gamma += species.get_gamma() * self.mol_frac[index]
+            self.mass += species.get_mass() * self.mol_frac[index]
             self.mpv[index] = np.sqrt(2.0 * k * self.temperature 
-                                            / species.mass)
+                                            / species.get_mass())
             if len(self.species) > 1:
-                prod *= species.mass
-                count += species.mass
+                prod *= species.get_mass()
+                count += species.get_mass()
         if len(self.species) > 1:
             self.reduced_mass = prod / count
         else:
-            self.reduced_mass = 0.5 * self.species[0].mass
+            self.reduced_mass = 0.5 * self.species[0].get_mass()
 #        print "reduced = ", self.reduced_mass
     
     
@@ -99,41 +182,41 @@ class Gas:
     def _find_col_property(self):
         # boltzmann constant
         k = 1.3806488e-23
-        for index1, molecule1 in enumerate(self.species):
-            for index2 in range(index1, self.species[-1].tag + 1):
-                molecule2 = self.species[index2]
+        for index1, mol1 in enumerate(self.species):
+            for index2 in range(index1, self.species[-1].get_tag() + 1):
+                mol2 = self.species[index2]
                 index = ((index1 * (index1 + 1)) / 2)
                 index += index2
-                self.ref_temperature[index] = self.species[index2].ref_temperature
-                self.dia[index] = 0.5 * (molecule1.dia + molecule2.dia)
-                self.viscosity_index[index] = 0.5 * (molecule1.viscosity_index 
-                                            + molecule2.viscosity_index)
-                self.ref_temperature[index] = 0.5 * (molecule1.ref_temperature 
-                                            + molecule2.ref_temperature)
+                self.ref_temp[index] = self.species[index2].get_ref_temp()
+                self.dia[index] = 0.5 * (mol1.get_dia() + mol2.get_dia())
+                self.visc_index[index] = 0.5 * (mol1.get_visc_index() 
+                                            + mol2.get_visc_index())
+                self.ref_temp[index] = 0.5 * (mol1.get_ref_temp() 
+                                            + mol2.get_ref_temp())
             constt = 0.0
-            for index2, molecule2 in enumerate(self.species):
+            for index2, mol2 in enumerate(self.species):
                 if index1 < index2:
                     index = ((index1 * (index1 + 1)) / 2)
                     index += index2
                 else:
                     index = ((index2 * (index2 + 1)) / 2)
                     index += index1
-                self.mean_f_path[index1] += ((1 + molecule1.mass / molecule2.mass)
-                        ** 0.5 * (self.ref_temperature[index] / self.temperature)
-                        ** (self.viscosity_index[index] - 0.5) * self.dia[index]
-                        ** 2.0 * self.mole_fraction[index2])
+                self.mean_f_path[index1] +=((1+mol1.get_mass()/mol2.get_mass())
+                        ** 0.5 * (self.ref_temp[index] / self.temperature)
+                        ** (self.visc_index[index] - 0.5) * self.dia[index]
+                        ** 2.0 * self.mol_frac[index2])
                 
-                constt = (self.dia[index] ** 2.0 * self.mole_fraction[index2]
-                        * (self.temperature / self.ref_temperature[index]) ** 
-                        (1.0 - self.viscosity_index[index]) * 
-                        self.ref_temperature[index] ** 0.5)
+                constt = (self.dia[index] ** 2.0 * self.mol_frac[index2]
+                        * (self.temperature / self.ref_temp[index]) ** 
+                        (1.0 - self.visc_index[index]) * 
+                        self.ref_temp[index] ** 0.5)
                 
                 self.mean_col_rate[index1] += constt
                 
                 if index1 != index2:
-                    self.col_density_rate[index] = self.mole_fraction[index1] * constt
+                    self.col_density_rate[index] = self.mol_frac[index1] * constt
                 else:
-                    self.col_density_rate[index] = self.mole_fraction[index1] * constt * 0.5
+                    self.col_density_rate[index]=self.mol_frac[index1]*constt*0.5
         
             self.mean_f_path[index1] = 1 / self.mean_f_path[index1]
 #            print self.mean_f_path[index1]
@@ -161,8 +244,8 @@ class Particles:
         self.mass = np.ones(n_particles)
         self.dia = np.ones(n_particles)
         self.cross_area = np.ones(n_particles)
-        self.viscosity_index = np.ones(n_particles)
-        self.ref_temperature = np.ones(n_particles)
+        self.visc_index = np.ones(n_particles)
+        self.ref_temp = np.ones(n_particles)
         self.viscosity_coeff = np.ones(n_particles)
         self.dof = np.ones(n_particles)
         self.gamma = np.ones(n_particles)
@@ -170,32 +253,27 @@ class Particles:
         self.num = n_particles
         self.n_eff = 0.0
         self.tag = np.zeros(n_particles, dtype = int)
-    
-    
+
+
     # this function should only be called once.
     # sets the particles according to the molecules it represents.
     def setup(self, domain_volume, mole_fraction, number_density, species, mpv):
-        n_species = self.num * np.asarray(mole_fraction)
-        count = 0
+        n_species = len(mole_fraction)
         self.n_eff = number_density * domain_volume / self.num
-        for index, molecule in enumerate(species):
-            try:
-                end = n_species[index + 1]
-            except:
-                end = self.num
-            self.mass[count:end] = molecule.mass
-            self.dia[count:end] = molecule.dia
-            self.cross_area[count:end] = 0.25 * np.pi * molecule.dia ** 2.0
-            self.viscosity_index[count:end] = molecule.viscosity_index
-            self.ref_temperature[count:end] = molecule.ref_temperature
-            self.viscosity_coeff[count:end] = molecule.viscosity_coeff
-            self.dof[count:end] = molecule.dof
-            self.gamma[count:end] = molecule.gamma
-            self.mpv[count:end] = mpv[index]
-            self.tag[count:end] = index
-            count += n_species[index]
-    
-    
+        for index in range(self.num):
+            tag = index % n_species
+            self.mass[index] = species[tag].get_mass()
+            self.dia[index] = species[tag].get_dia()
+            self.cross_area[index] = 0.25 * np.pi * species[tag].get_dia() ** 2.0
+            self.visc_index[index] = species[tag].get_visc_index()
+            self.ref_temp[index] = species[tag].get_ref_temp()
+            self.viscosity_coeff[index] = species[tag].get_visc_coeff()
+            self.dof[index] = species[tag].get_dof()
+            self.gamma[index] = species[tag].get_gamma()
+            self.mpv[index] = mpv[tag]
+            self.tag[index] = tag
+
+
     def move_all(self, dt):
         self.x += self.u * dt
         self.y += self.v * dt
