@@ -30,7 +30,7 @@ class Boundary:
         self.n_particles_in_cell = n_particles_in_cell
         self.particles = particles
         self.ref_point = ref_point
-        self.cell_gen = CellGenerator(cells, gas, domain, ref_point)
+        self.cell_gen = CellGenerator(cells, domain, ref_point)
         self.b_cells = self.cell_gen.run()
         self.slope = self.cell_gen.slope
         self.cell_detector = CellDetector(cells, self.b_cells, self.slope)
@@ -78,10 +78,9 @@ class Boundary:
 
 
 class CellGenerator:
-    def __init__(self, cells, gas, domain, ref_point):
+    def __init__(self, cells, domain, ref_point):
         self.domain = domain
         self.cells = cells
-        self.gas = gas
         self.ref_point = ref_point
         self.slope = []
         self.b_cells = []
@@ -104,7 +103,7 @@ class CellGenerator:
     
     
     # assuming domain is rectangular.
-    # assuming cells are of equal length and width.
+    # assuming cells have constant length and width.
     # slope represents the slope of the inlet boundary.
     def _generate_segment(self, inlet_index):
         vertex1 = self.domain.inlet[inlet_index]
@@ -130,7 +129,7 @@ class CellGenerator:
         n_x = round(length / self.cells.length[0])
         centre = [(vertex1[0] + vertex2[0]) / 2.0, (vertex1[1] + vertex2[1]) / 2.0]
         datum = self._find_datum(centre, sin, cos, self.cells.width[0])
-        b_cell = dm_c.RectCells(n_x, 1, length, self.cells.width[0], datum, self.gas)
+        b_cell = dm_c.RectCells(n_x, 1, length, self.cells.width[0], datum)
         b_cell = self._transform_cell(b_cell, sin, cos, datum)
         return b_cell
     
@@ -235,6 +234,44 @@ class CellDetector:
 
 
 
+class ParticleDetector:
+    def __init__(self, particles, domain, ref_point, total_particles):
+        self.particles = particles
+        self.domain = domain
+        self.ref_point = ref_point
+        self.total_particles = total_particles
+        self.particle_detector = dm_d.PointDetector(domain.outlet, ref_point)
+        self.b_particle_detector = dm_d.PointDetector(domain.inlet, ref_point)
+    
+    
+    def run(self, b_particles):
+        particles_out = self._detect_particles_out()
+#        print "particles_out = ", particles_out
+        b_particles_in = self._detect_b_particles_in(b_particles)
+        return (particles_out, b_particles_in)
+    
+    
+    # this function returns the particles out of domain that were inside the 
+    # particles array in the domain.
+    def _detect_particles_out(self):
+        points = []
+        for index in range(len(self.particles.x)):
+            point = (self.particles.x[index], self.particles.y[index])
+            points.append(point)
+#        print "points = ", points
+        return self.particle_detector.detect_all(points, 1)
+    
+    
+    def _detect_b_particles_in(self, b_particles):
+        points = []
+        for index in range(len(b_particles.x)):
+            point = (b_particles.x[index], b_particles.y[index])
+            points.append(point)        
+        b_particles_in = self.b_particle_detector.detect_all(points)
+        return b_particles_in
+
+
+
 # this class would take the particle array and initialise it according to its
 # adj cells value. 
 class ParticleSetter:
@@ -328,44 +365,6 @@ class ParticleSetter:
 
 
 
-class ParticleDetector:
-    def __init__(self, particles, domain, ref_point, total_particles):
-        self.particles = particles
-        self.domain = domain
-        self.ref_point = ref_point
-        self.total_particles = total_particles
-        self.particle_detector = dm_d.PointDetector(domain.outlet, ref_point)
-        self.b_particle_detector = dm_d.PointDetector(domain.inlet, ref_point)
-    
-    
-    def run(self, b_particles):
-        particles_out = self._detect_particles_out()
-#        print "particles_out = ", particles_out
-        b_particles_in = self._detect_b_particles_in(b_particles)
-        return (particles_out, b_particles_in)
-    
-    
-    # this function returns the particles out of domain that were inside the 
-    # particles array in the domain.
-    def _detect_particles_out(self):
-        points = []
-        for index in range(len(self.particles.x)):
-            point = (self.particles.x[index], self.particles.y[index])
-            points.append(point)
-#        print "points = ", points
-        return self.particle_detector.detect_all(points, 1)
-    
-    
-    def _detect_b_particles_in(self, b_particles):
-        points = []
-        for index in range(len(b_particles.x)):
-            point = (b_particles.x[index], b_particles.y[index])
-            points.append(point)        
-        b_particles_in = self.b_particle_detector.detect_all(points)
-        return b_particles_in
-
-
-
 class ParticleModifier:
     def __init__(self, particles):
         self.particles = particles
@@ -454,12 +453,6 @@ class ParticleModifier:
     
     
     def _delete_particles(self, particle_out):
-#        for index in range(len(self.particles.x)):
-#            if index in particle_out:
-#                continue
-#            elif (self.particles.x[index] > 1.0 or self.particles.x[index] < 0.0
-#            or self.particles.y[index] > 1.0 or self.particles.y[index] < 0.0):
-#                print self.particles.x[index], self.particles.y[index]
         self.particles.x = np.delete(self.particles.x, particle_out)
         self.particles.y = np.delete(self.particles.y, particle_out)
         self.particles.u = np.delete(self.particles.u, particle_out)
@@ -476,8 +469,6 @@ class ParticleModifier:
     
     
     def _modify(self, particle_index, b_particle_index, b_particles):
-#        if b_particles.x[b_particle_index] >= 1.0:
-#            print b_particle_index, particle_index
         self.particles.x[particle_index] = b_particles.x[b_particle_index]
         self.particles.y[particle_index] = b_particles.y[b_particle_index]
         self.particles.u[particle_index] = b_particles.u[b_particle_index]

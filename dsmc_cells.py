@@ -5,6 +5,15 @@ Created on Sun Sep 13 23:08:12 2015
 @author: mohit
 """
 
+"""
+Distribution algorithm would change depending upon the geometry.
+particles out is a domain geometry specific job.
+So, it needs to be done in the distributor itself.
+Here, I am using rectangular cells having constant length and width.
+Also, it is assumed that the rectangular cells only have verticla and 
+horizontal sides.
+"""
+
 import numpy as np
 
 # Cells would only the instantaneous values. For sampling, these instantaneous
@@ -18,20 +27,21 @@ import numpy as np
 # particle_inside would contain particles in a cell. each element of 
 # particle inside is a list of particles inside. For, e.g., 1st element
 # would contain list particles inside 1st cell and so on.
+# It is assumed that the rect cells have only horizontal and vertical sides.
 class RectCells:
     def __init__(self, n_x, n_y, length, width, centre, n_species):
         """ 
-        just storing the x values in xc at y = 0 and y values in yc 
-        at x = 0.
+        storing the x values of cell centre in xc of cells at y = 0 and
+        y values in yc at x = 0.
         """
         n_cells = int(n_x) * int(n_y)
         self.n_x = int(n_x)
         self.n_y = int(n_y)
         self.xc = np.zeros(n_x)
         self.yc = np.zeros(n_y)
-        self.length = np.ones(n_cells) * length / self.n_x
-        self.width = np.ones(n_cells) * width / self.n_y
-        self.volume = np.ones(n_cells) * self.length * self.width
+        self.cell_length = length / self.n_x
+        self.cell_width = width / self.n_y
+        self.cell_volume = self.cell_length * self.cell_width
         self.particles_inside = [[] for i in range(n_cells)]
         self.u = np.zeros(n_cells)
         self.v = np.zeros(n_cells)
@@ -39,13 +49,100 @@ class RectCells:
         self.mass = np.zeros(n_cells)
         self.number_density = np.zeros((n_species, n_cells), dtype=float)
         # n_particles gives the no. of particles of each species at each cell
-        # for e.g. no. of particles of species of tag 1 at cell 0 can be localized by
-        # self.n_particles[0][0]
+        # for e.g. no. of particles of species of tag 1 at cell 0 can be 
+        # located by self.n_particles[0][0], (cell index is the second one)
         self.n_particles = np.zeros((n_species, n_cells), dtype = int)
         self.temperature = np.zeros(n_cells)
         self.gas_temperature = np.zeros((n_cells, n_species))
         self._find_cell_location(centre, length, width)
         self.n_species = n_species
+        # datum = the lower left corner point of the domain.
+        self.datum = (self.xc[0] - self.cell_length / 2.0,
+                      self.yc[0] - self.cell_width / 2.0)
+        self.x_max = self.datum[0] + length
+        self.y_max = self.datum[1] + width
+    
+    
+    # assuming constant cell length and cell width.
+    def find_cell_index(self, x, y):
+        x = x - self.datum[0]
+        y = y - self.datum[1]
+        if (self._inside_domain(x, y)):
+            cell_index = int(y / self.cell_width) * self.n_x
+            cell_index += int(x / self.cell_length)
+    #        print "cell_index = ", cell_index, x, y
+            return cell_index
+        else:
+            return None
+        
+    
+    # this function would reset the particles inside attribute of cells.
+    def reset_particles(self):
+        n_cells = self.n_x * self.n_y
+        self.n_particles = np.zeros((self.n_species, n_cells), dtype = int)
+        self.particles_inside = [[] for i in range(n_cells)]
+    
+    
+    # this function would return a boundary cell given a boundary line segment.
+    # Since creation of a boundary is a geometric feature, it is done here 
+    # rather than inside the boundary module.
+    def generate_cell(self, line):
+        vertex1 = line[0]
+        vertex2 = line[1]
+        dx = vertex1[0] - vertex2[0]
+        if np.abs(dx) <= 1.0e-6:
+            return self._generate_vert_cell(vertex1, vertex2)
+        else:
+            return self._generate_hor_cell(vertex1, vertex2)
+    
+    
+    # this function is a helper function to generate_cell.
+    # this function is used to generates boundary cells if the line segment is
+    # horizontal.
+    def _generate_hor_cell(self, vertex1, vertex2):
+        x = (self.datum[0] + self.x_max) / 2.0
+        
+        if vertex1[1] < self.y_max:
+            y = self.datum[1] - self.cell_width / 2.0
+        else:
+            y = self.y_max + self.cell_width / 2.0
+        
+        return RectCells(self.n_x, 1, self.cell_length * self.n_x, 
+                         self.cell_width, (x, y), self.n_species)
+    
+    # this function is another helper function to generate_cell.
+    # this function is used to generates boundary cells if the line segment is
+    # vertical.
+    def _generate_vert_cell(self, vertex1, vertex2):
+        y = (self.datum[1] + self.y_max) / 2.0
+        
+        if vertex1[0] < self.x_max:
+            x = self.datum[0] - self.cell_length / 2.0
+        else:
+            x = self.x_max + self.cell_length / 2.0
+        
+        return RectCells(1, self.n_y, self.cell_width * self.n_y, 
+                         self.cell_length, (x, y), self.n_species)
+    
+    
+    # assuming all cells have same dimensions.
+    # centre = domain centre, length = domain length and width = domain width.
+    def _find_cell_location(self, centre, length, width):
+        x_lower_left = centre[0] - length / 2.0 + self.cell_length / 2.0
+        y_lower_left = centre[1] - width / 2.0 + self.cell_width / 2.0
+        for i in range(self.n_x):
+            self.xc[i] = x_lower_left +  self.cell_length * i
+        
+        for i in range(self.n_y):
+            self.yc[i] = y_lower_left +  self.cell_width * i
+    
+    
+    def _inside_domain(self, x, y):
+        if (x <= self.datum[0] or y <= self.datum[1] or
+            x >= self.x_max or y >= self.y_max):
+            return False
+        else:
+            return True
     
     
     # this function returns the array of locations of the cells.
@@ -66,41 +163,146 @@ class RectCells:
             self.get_subset_center(stack, mid + 1, end)
     
     
-    # this function generates the location of cells based on xc and yc values 
-    # and its cell number.
+    # this function generates the location of cell centre given its cell index.
     def get_center(self, cell_index):
         xc = self.xc[cell_index % self.n_x]
         yc = self.yc[int(cell_index / self.n_x)]
         return (xc, yc)
     
+    # this function sets the value of the xc value of a certain cell index to a 
+    # new value.
+    def set_cell_x_center(self, cell_index, xc):
+        cell_index = cell_index / self.n_x
+        self.xc[cell_index] = xc
     
-    # assuming equal length and width.
-    def find_cell_index(self, x, y):
-        datum = (self.xc[0]-self.length[0]/2.0, self.yc[0]-self.width[0]/2.0)
-        x = x - datum[0]
-        y = y - datum[1]
-        cell_index = int(y / self.width[0]) * self.n_x
-        cell_index += int(x / self.length[0])
-#        print "cell_index = ", cell_index, x, y
-        return cell_index
-        
     
-    # assuming all cells have same dimensions.
-    def _find_cell_location(self, centre, length, width):
-        x_lower_left = centre[0] - length / 2.0 + self.length[0] / 2.0
-        y_lower_left = centre[1] - width / 2.0 + self.width[0] / 2.0
-        for i in range(self.n_x):
-            self.xc[i] = x_lower_left +  self.length[0] * i
-        
-        for i in range(self.n_y):
-            self.yc[i] = y_lower_left +  self.width[0] * i
-        
+    # this function sets the value of the yc value of a certain cell index to a
+    # new value.
+    def set_cell_y_center(self, cell_index, yc):
+        cell_index = cell_index % self.n_y
+        self.yc[cell_index] = yc
     
-    # this function would reset the particles inside attribute of cells.
-    def reset_particles(self):
-        n_cells = self.n_x * self.n_y
-        self.n_particles = np.zeros((self.n_species, n_cells), dtype = int)
-        self.particles_inside = [[] for i in range(n_cells)]
+    
+    def get_cell_length(self, cell_index=None):
+        return self.cell_length
+    
+    
+    def get_cell_width(self, cell_index=None):
+        return self.cell_width
+    
+    
+    def get_cell_volume(self, cell_index=None):
+        return self.cell_volume
+    
+    
+    def get_mass(self, cell_index=None):
+        if cell_index == None:
+            return self.mass
+        else:
+            return self.mass[cell_index]
+    
+    
+    def set_mass(self, mass, cell_index=None):
+        if cell_index == None:
+            self.mass = mass
+        else:
+            self.mass[cell_index] = mass
+    
+    
+    def get_temperature(self, cell_index=None):
+        if cell_index == None:
+            return self.temperature
+        else:
+            return self.temperature[cell_index]
+    
+    
+    def set_temperature(self, temperature, cell_index=None):
+        if cell_index == None:
+            self.temperature = temperature
+        else:
+            self.temperature[cell_index] = temperature
+    
+    
+    def get_number_density(self, tag=None, cell_index=None):
+        if tag == None and cell_index == None:
+            return self.number_density
+        else:
+            return self.number_density[tag][cell_index]
+    
+    
+    def set_number_density(self, number_density, tag=None, cell_index=None):
+        if tag == None and cell_index == None:
+            self.number_density = number_density
+        else:
+            self.number_density[tag][cell_index] = number_density
+    
+    
+    def get_n_particles(self, tag=None, cell_index=None):
+        if tag == None and cell_index == None:
+            return self.n_particles
+        else:
+            return self.n_particles[tag][cell_index]
+    
+    
+    def set_n_particles(self, n_particles, tag=None, cell_index=None):
+        if tag == None and cell_index == None:
+            self.n_particles = n_particles
+        else:
+            self.n_particles[tag][cell_index] = n_particles
+    
+    
+    def get_particles_inside(self, cell_index=None):
+        if cell_index == None:
+            return self.particles_inside
+        else:
+            return self.particles_inside[cell_index]
+    
+    
+    def add_particle(self, cell_index, particle_index, tag):
+        self.particles_inside[cell_index].append(particle_index)
+        self.n_particles[tag][cell_index] += 1
+    
+    
+    def get_velx(self, cell_index=None):
+        if cell_index == None:
+            return self.u
+        else:
+            return self.u[cell_index]
+    
+    
+    def get_vely(self, cell_index=None):
+        if cell_index == None:
+            return self.v
+        else:
+            return self.v[cell_index]
+    
+    
+    def get_velz(self, cell_index=None):
+        if cell_index == None:
+            return self.w
+        else:
+            return self.w[cell_index]
+    
+    
+    def set_velx(self, velx, cell_index=None):
+        if cell_index == None:
+            self.u = velx
+        else:
+            self.u[cell_index] = velx
+    
+    
+    def set_vely(self, vely, cell_index=None):
+        if cell_index == None:
+            self.v = vely
+        else:
+            self.v[cell_index] = vely
+    
+    
+    def set_velz(self, velz, cell_index=None):
+        if cell_index == None:
+            self.w = velz
+        else:
+            self.w[cell_index] = velz
 
 
 
@@ -108,27 +310,19 @@ class Distributor:
     def __init__(self, cells, particles):
         self.cells = cells
         self.particles = particles
+        self.particles_out = []
     
-    
-    def find_tag_particles(self, tag):
-        tag_particles = []
-        for index in self.cells.particles_inside:
-            if self.particles.tag[index] == tag:
-                tag_particles.append
-        
-        return (np.asarray(tag_particles))
-    
-    
+
     # this function distributes particle in a rectangular cell.
-    # assumption: particles are inside the domain
+    # assumption: particles are inside the domain.
     def distribute_all_particles(self):
         self.cells.reset_particles()
-#        print "n_cells = ", len(self.cells.xc) * len(self.cells.yc)
+        self.particles_out = []
         for index in range(len(self.particles.x)):
-            vel = (self.particles.u[index], self.particles.v[index])
-            loc = (self.particles.x[index] - vel[0] * 1e-5,
-                   self.particles.y[index] - vel[1] * 1e-5)
-            current_loc = ( self.particles.x[index], self.particles.y[index])
+            vel = (self.particles.get_velx(index), self.particles.get_vely(index))
+            loc = (self.particles.get_x(index) - vel[0] * 1e-5,
+                   self.particles.get_y(index) - vel[1] * 1e-5)
+            current_loc = (self.particles.get_x(index), self.particles.get_y(index))
 #            y = self.particles.x[index] - 0.2
 #            if (y > self.particles.y[index]):
 #                vel = (self.particles.u[index], self.particles.v[index])
@@ -140,16 +334,17 @@ class Distributor:
 #                else:
 #                    flag = False
 #                print "not reflected index loc vel flag  = ", index, loc, vel, flag
-            if (self.particles.x[index] < 0.0 or self.particles.y[index] < 0.0
-            or self.particles.x[index] > 1.0 or self.particles.y[index] > 1.0):
+            if (self.particles.get_x(index) < 0.0 or self.particles.get_y(index) < 0.0
+            or self.particles.get_x(index) > 1.0 or self.particles.get_y(index) > 1.0):
                 print "index loc vel cuurent_loc = ", index, loc, vel, current_loc
-            cell_index = self.cells.find_cell_index(self.particles.x[index], 
-                                                    self.particles.y[index])
-#           print "cell_index = ", cell_index, index
-#           print "particle_x = ", self.particles.x[index]
-#           print "particle_y = ", self.particles.y[index]
-            self.cells.particles_inside[cell_index].append(index)
-            tag = self.particles.tag[index]
-#            print tag, cell_index
-            self.cells.n_particles[tag][cell_index] += 1
-            
+            cell_index = self.cells.find_cell_index(self.particles.get_x(index), 
+                                                    self.particles.get_y(index))
+            if cell_index == None:
+                self.particles_out.append(index)
+            else:
+                self.cells.add_particle(cell_index, index, 
+                                        self.particles.get_tag(index))
+    
+    
+    def get_particles_out(self):
+        return self.particles_out

@@ -5,7 +5,6 @@ Created on Sun Sep 13 23:12:08 2015
 @author: mohit
 """
 
-import numpy as np
 import dsmc_detector as dm_d
 
 
@@ -18,7 +17,7 @@ class MovementManager:
         self.reflector = Reflector(surface, particles, surface_temperature)
     
     def move_all(self, model_key, dt):
-        self._move_subset(0, len(self.particles.x) - 1, dt, model_key)
+        self._move_subset(0, self.particles.get_particles_count() - 1, dt, model_key)
     
     def _move_subset(self, start, end, dt, model_key):
         start, end = int(start), int(end)
@@ -34,9 +33,10 @@ class MovementManager:
     # would either reflect or move the particle.
     def _reflect_n_move(self, particle_index, dt, model_key):
         particle_index = int(particle_index)
-        point = (self.particles.x[particle_index], self.particles.y[particle_index])
-        u = self.particles.u[particle_index]
-        v = self.particles.v[particle_index]
+        point = (self.particles.get_x(particle_index), 
+                 self.particles.get_y(particle_index))
+        u = self.particles.get_velx(particle_index)
+        v = self.particles.get_vely(particle_index)
         if self.detector.detect_point(point, u, v, dt):
             refl_surface = self.detector.get_surface_index()
             intersect_time = self.detector.get_intersect_time()
@@ -100,21 +100,21 @@ class Specular:
     def _modify_vel(self, particle_index, surface_index):
         dx = self.surface_tangent[surface_index][0]
         dy = self.surface_tangent[surface_index][1]
-        v = self.particles.v[particle_index] * dy * dy
-        v -= self.particles.v[particle_index] * dx * dx
-        v += self.particles.u[particle_index] * dx * dy * 2.0
+        v = self.particles.get_vely(particle_index) * dy * dy
+        v -= self.particles.get_vely(particle_index) * dx * dx
+        v += self.particles.get_velx(particle_index) * dx * dy * 2.0
         v /= (dx * dx + dy * dy)
-        u = self.particles.u[particle_index] * dx * dx
-        u -= self.particles.u[particle_index] * dy * dy
-        u += self.particles.v[particle_index] * dx * dy * 2.0
+        u = self.particles.get_velx(particle_index) * dx * dx
+        u -= self.particles.get_velx(particle_index) * dy * dy
+        u += self.particles.get_vely(particle_index) * dx * dy * 2.0
         u /= (dx * dx + dy * dy)
-        self.particles.v[particle_index] = v
-        self.particles.u[particle_index] = u
+        self.particles.set_velx(u, particle_index)
+        self.particles.set_vely(v, particle_index)
     
     
     def _modify_location(self, index, por, surface_index):        
-        self.particles.x[index] = por[0]
-        self.particles.y[index] = por[1]
+        self.particles.set_x(por[0], index)
+        self.particles.set_y(por[1], index)
 
 
 

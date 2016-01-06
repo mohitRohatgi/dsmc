@@ -163,7 +163,9 @@ class TestMovementManager(unittest.TestCase):
             self.assertAlmostEqual(particles.v[index], 1.0, 6)
     
     
-    def test_concave_cup(self):
+    def test_concave_corner(self):
+        particles = dm_p.Particles(100)
+        surface = [(-1.0, 2.0), (-1.0, -3.0), (4.0, -3.0), (4.0, 2.0)]
         pass
 
 

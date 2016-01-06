@@ -56,7 +56,7 @@ class Detector:
         self.particles = particles
         self.dt = dt
         self.collision_pair = []
-        self.rel_speed = np.zeros(cells.n_x * cells.n_y)
+        self.rel_speed = np.zeros(len(cells.get_temperature()))
         self.model = {'binary detector' : CollisionDetector(cells, particles, 
                                                             reduced_mass, dt), 
                     1 : CollisionDetector(cells, particles, reduced_mass, dt)}
@@ -81,11 +81,12 @@ class CollisionDetector:
         self.cells = cells
         self.reduced_mass = reduced_mass
         self.dt = dt
-        length = cells.n_x * cells.n_y
+        length = len(cells.get_temperature())
         self.ref_max_area = np.ones(length)
-        self.ref_max_area *= self.particles.dia[0] ** 2.0 * np.pi / 2.0 
-        self.ref_max_area *= (max(self.particles.u) ** 2.0 + max(self.particles.v)
-                                ** 2.0 + max(self.particles.w) ** 2.0)
+        self.ref_max_area *= self.particles.get_dia(0) ** 2.0 * np.pi / 2.0 
+        self.ref_max_area *= (max(self.particles.get_velx()) ** 2.0 + 
+                            max(self.particles.get_vely()) ** 2.0 + 
+                            max(self.particles.get_velz()) ** 2.0)
         
         self.int_collisions = np.zeros(length, dtype = int)
         self.remaining_collisions = np.zeros(length, dtype = float)
@@ -101,9 +102,10 @@ class CollisionDetector:
     def run(self):
         stack1 = []
         stack2 = []
-        self.uncol_particles = [list(self.cells.particles_inside[i])
-                                for i in range(self.cells.n_x * self.cells.n_y)]
-        self._detect_subset(stack1, stack2, 0, self.cells.n_x * self.cells.n_y - 1)
+        self.uncol_particles = [list(self.cells.get_particles_inside(i))
+                            for i in range(len(self.cells.get_temperature()))]
+        self._detect_subset(stack1, stack2, 0, 
+                            len(self.cells.get_temperature()) - 1)
         return (stack1, stack2)
     
     
@@ -129,10 +131,10 @@ class CollisionDetector:
     # assuming all the particle represents same number of molecules, n_eff.
     # assuming the cells are rectangular.
     def _find_collisions(self, cell_index):
-        probability = self.particles.n_eff * self.ref_max_area[cell_index]
-        probability /= self.cells.volume[cell_index] 
+        probability = self.particles.get_n_eff() * self.ref_max_area[cell_index]
+        probability /= self.cells.get_cell_volume(cell_index) 
         probability *= self.dt
-        n_particle = len(self.cells.particles_inside[cell_index])
+        n_particle = len(self.cells.get_particles_inside(cell_index))
         collisions = 0.5 * n_particle * (n_particle - 1) * probability
         self.int_collisions[cell_index] = int(collisions + 
                                         self.remaining_collisions[cell_index])
@@ -183,18 +185,18 @@ class CollisionDetector:
     
     
     def _find_relative_speed(self, index1, index2):
-        u_rel = self.particles.u[index1] - self.particles.u[index2]
-        v_rel = self.particles.v[index1] - self.particles.v[index2]
-        w_rel = self.particles.w[index1] - self.particles.w[index2]
+        u_rel = self.particles.get_velx(index1) - self.particles.get_velx(index2)
+        v_rel = self.particles.get_vely(index1) - self.particles.get_vely(index2)
+        w_rel = self.particles.get_velz(index1) - self.particles.get_velz(index2)
         relative_speed =  np.sqrt(u_rel ** 2  + v_rel ** 2 + w_rel ** 2)
         return (relative_speed)
     
     
     # this function finds the collision area and updates the max collision area.
     def _find_col_area(self, pair, cell_index, relative_speed):
-        d_ref = mean(self.particles.dia[pair[0]], self.particles.dia[pair[1]])
-        T_ref = mean(self.particles.ref_temp[pair[0]], 
-                     self.particles.ref_temp[pair[1]])
+        d_ref = mean(self.particles.get_dia(pair[0]), self.particles.get_dia(pair[1]))
+        T_ref = mean(self.particles.get_ref_temp(pair[0]), 
+                     self.particles.get_ref_temp(pair[1]))
         omega_ref = mean(self.particles.visc_index[pair[0]], 
                          self.particles.visc_index[pair[1]])
         
@@ -272,8 +274,12 @@ class VhsCollider():
         index1 = self.collision_pairs[pair_index][0]
         index2 = self.collision_pairs[pair_index][1]
         particle = self.particles
-        particle.u[index1], particle.v[index1], particle.w[index1] = vel11, vel12, vel13
-        particle.u[index2], particle.v[index2], particle.w[index2] = vel21, vel22, vel23
+        particle.set_velx(vel11, index1)
+        particle.set_vely(vel12, index1)
+        particle.set_velz(vel13, index1)
+        particle.set_velx(vel11, index2)
+        particle.set_vely(vel12, index2)
+        particle.set_velz(vel13, index2)
     
     
     def _find_vhs_post(self, rel_speed):
@@ -291,9 +297,9 @@ class VhsCollider():
         particle = self.particles
         index1 = self.collision_pairs[index][0]
         index2 = self.collision_pairs[index][1]
-        u_avg = mean(particle.u[index1], particle.u[index2])
-        v_avg = mean(particle.v[index1], particle.v[index2])
-        w_avg = mean(particle.w[index1], particle.w[index2])
+        u_avg = mean(particle.get_velx(index1), particle.get_velx(index2))
+        v_avg = mean(particle.get_vely(index1), particle.get_vely(index2))
+        w_avg = mean(particle.get_velz(index1), particle.get_velz(index2))
         return (u_avg, v_avg, w_avg)
     
     

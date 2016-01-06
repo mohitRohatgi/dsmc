@@ -15,14 +15,14 @@ import dsmc_boundary as dm_b
 
 
 class DsmcSolver:
-    def __init__(self, cells, gas, domain, n_particles_in_cell, ref_point, dt,
-                 n_steps):
+    def __init__(self, cells, gas, domain, n_particles_in_cell,
+                 ref_point, dt, n_steps):
         
         self.n_steps = n_steps
         self.cells = cells
         self.particles, self.cells_in = dm_i.Initialiser.run(cells, gas, domain,
                                                 n_particles_in_cell, ref_point)
-                
+        
         self.distributor = dm_c.Distributor(cells, self.particles)
         
         self.collision_manager = dm_col.CollisionManager(cells, self.particles,
@@ -32,25 +32,27 @@ class DsmcSolver:
                                 gas.get_n_species(), self.particles, n_steps)
         
         self.flag = False
-        if (len(domain.inlet) > 1):
+        if (domain.is_open()):
             self.flag = True
             self.boundary = dm_b.Boundary(cells, gas, domain, n_particles_in_cell,
                                       self.particles, ref_point)
-        self.movement_manager = dm_r.MovementManager(self.particles, domain.surface)
+        self.movement_manager = dm_r.MovementManager(self.particles,
+                                                     domain.get_surface())
         self.dt = dt
-        self.temperature = np.zeros(len(cells.temperature))
-        self.number_density = np.zeros((gas.get_n_species(), len(cells.temperature)))
+        self.temperature = np.zeros(len(cells.get_temperature()))
+        self.number_density = np.zeros((gas.get_n_species(), 
+                                        len(cells.get_temperature())))
     
     
     def run(self, detector_key, collider_key, reflection_key):
         
         for i in range(self.n_steps):
             self.movement_manager.move_all(reflection_key, self.dt)
-            if (self.flag):
-                self.boundary.run(self.dt)
             self.distributor.distribute_all_particles()
             self.collision_manager.run(collider_key, detector_key)
             self.sampling_manager.run()
+            if (self.flag):
+                self.boundary.run(self.dt)
         self.temperature = self.sampling_manager.get_temperature()
         self.number_density = self.sampling_manager.get_number_density()
         constt = 0.0
@@ -61,7 +63,7 @@ class DsmcSolver:
     
     
     def _find_moving_particles(self, reflected_particles):
-        index_list = range(len(self.particles.x))
+        index_list = range(self.particles.get_particles_count())
         for index in reflected_particles:
             np.delete(index_list, index)
         return index_list
