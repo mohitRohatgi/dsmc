@@ -46,10 +46,10 @@ class BoundaryGenerator:
         if self.domain.is_zero_grad_on():
             for line in self.domain.get_zero_grad():
                 zero_grad_cell = self.cells.generate_cell(line)
-                zero_grad_cells.append(self.generate_cell(zero_grad_cell))
+                zero_grad_cells.append(zero_grad_cell)
                 adj_map[zero_grad_cell] = self._create_map(zero_grad_cell, line)
         
-        return Boundary(self.inlet_cells, self.zero_grad_cells, adj_map)
+        return Boundary(inlet_cells, zero_grad_cells, adj_map)
     
     
     # this function would map each cell index of inlet/ zero gradient cell to 
@@ -58,7 +58,7 @@ class BoundaryGenerator:
     def _create_map(self, bound_cell, line):
         cell_map = {}
         for i in range(len(bound_cell.u)):
-            xc, yc = bound_cell.get_cell_center()
+            xc, yc = bound_cell.get_center(i)
             normal_vector = self._find_normal_vector(line, (xc, yc))
             xc += normal_vector[0] * 1.01
             yc += normal_vector[1] * 1.01
@@ -75,8 +75,8 @@ class BoundaryGenerator:
         dx = vertex2[0] - vertex1[0]
         dy = vertex2[1] - vertex1[1]
         t = (point[0] - vertex1[0]) * dx + (point[1] - vertex1[1]) * dy
-        t /= (vertex2[0] * dx + vertex2[1] * dy)
-        return (vertex1[0] + t * vertex2[0], vertex1[1] + t * vertex2[1])
+        t /= (dx * dx + dy * dy)
+        return (vertex1[0] + t * dx - point[0], vertex1[1] + t * dy - point[1])
         
 
 
@@ -126,5 +126,16 @@ class Boundary:
     def get_zero_grad_cells(self):
         return self.zero_grad_cells
     
-    def get_adj_map(self):
-        return self.adj_map
+    
+    # this method returns the map between the boundary cell on a particular 
+    # line segment and the cell inside the domain.
+    def get_adj_map(self, cell_ref):
+        return self.adj_map[cell_ref]
+    
+    
+    # this method returns the cell index of the cell inside the domain adjacent
+    # to the cell being refered by the cell_ref(reference variable of cell 
+    # object) and  cell index.
+    def get_adj_cell_index(self, cell_ref, cell_index):
+        Map = self.adj_map[cell_ref]
+        return Map[cell_index]

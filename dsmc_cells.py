@@ -39,8 +39,8 @@ class RectCells:
         self.n_y = int(n_y)
         self.xc = np.zeros(n_x)
         self.yc = np.zeros(n_y)
-        self.cell_length = length / self.n_x
-        self.cell_width = width / self.n_y
+        self.cell_length = float(length) / self.n_x
+        self.cell_width = float(width) / self.n_y
         self.cell_volume = self.cell_length * self.cell_width
         self.particles_inside = [[] for i in range(n_cells)]
         self.u = np.zeros(n_cells)
@@ -54,20 +54,23 @@ class RectCells:
         self.n_particles = np.zeros((n_species, n_cells), dtype = int)
         self.temperature = np.zeros(n_cells)
         self.gas_temperature = np.zeros((n_cells, n_species))
-        self._find_cell_location(centre, length, width)
+        self._find_cell_location(centre, float(length), float(width))
         self.n_species = n_species
         # datum = the lower left corner point of the domain.
         self.datum = (self.xc[0] - self.cell_length / 2.0,
                       self.yc[0] - self.cell_width / 2.0)
-        self.x_max = self.datum[0] + length
-        self.y_max = self.datum[1] + width
+        self.x_max = self.datum[0] + float(length)
+        self.y_max = self.datum[1] + float(width)
+        self.domain_length = length
+        self.domain_width = width
     
     
     # assuming constant cell length and cell width.
     def find_cell_index(self, x, y):
-        x = x - self.datum[0]
-        y = y - self.datum[1]
+        print self.datum
         if (self._inside_domain(x, y)):
+            x = x - self.datum[0]
+            y = y - self.datum[1]
             cell_index = int(y / self.cell_width) * self.n_x
             cell_index += int(x / self.cell_length)
     #        print "cell_index = ", cell_index, x, y
@@ -90,7 +93,7 @@ class RectCells:
         vertex1 = line[0]
         vertex2 = line[1]
         dx = vertex1[0] - vertex2[0]
-        if np.abs(dx) <= 1.0e-6:
+        if dx * dx <= 1.0e-12:
             return self._generate_vert_cell(vertex1, vertex2)
         else:
             return self._generate_hor_cell(vertex1, vertex2)
@@ -100,29 +103,30 @@ class RectCells:
     # this function is used to generates boundary cells if the line segment is
     # horizontal.
     def _generate_hor_cell(self, vertex1, vertex2):
-        x = (self.datum[0] + self.x_max) / 2.0
+        x = (vertex1[0] + vertex2[0]) / 2.0
+        dist = np.abs(vertex1[0] - vertex2[0])
         
         if vertex1[1] < self.y_max:
             y = self.datum[1] - self.cell_width / 2.0
         else:
             y = self.y_max + self.cell_width / 2.0
-        
-        return RectCells(self.n_x, 1, self.cell_length * self.n_x, 
+        return RectCells(round(dist / self.cell_length), 1, dist, 
                          self.cell_width, (x, y), self.n_species)
     
     # this function is another helper function to generate_cell.
     # this function is used to generates boundary cells if the line segment is
     # vertical.
     def _generate_vert_cell(self, vertex1, vertex2):
-        y = (self.datum[1] + self.y_max) / 2.0
+        y = (vertex1[1] + vertex2[1]) / 2.0
+        dist = np.abs(vertex1[1] - vertex2[1])
         
         if vertex1[0] < self.x_max:
             x = self.datum[0] - self.cell_length / 2.0
         else:
             x = self.x_max + self.cell_length / 2.0
         
-        return RectCells(1, self.n_y, self.cell_width * self.n_y, 
-                         self.cell_length, (x, y), self.n_species)
+        return RectCells(1, round(dist / self.cell_width), self.cell_length,
+                         dist, (x, y), self.n_species)
     
     
     # assuming all cells have same dimensions.
@@ -138,8 +142,8 @@ class RectCells:
     
     
     def _inside_domain(self, x, y):
-        if (x <= self.datum[0] or y <= self.datum[1] or
-            x >= self.x_max or y >= self.y_max):
+        if (x < self.datum[0] or y < self.datum[1] or
+            x > self.x_max or y > self.y_max):
             return False
         else:
             return True
@@ -323,20 +327,12 @@ class Distributor:
             loc = (self.particles.get_x(index) - vel[0] * 1e-5,
                    self.particles.get_y(index) - vel[1] * 1e-5)
             current_loc = (self.particles.get_x(index), self.particles.get_y(index))
-#            y = self.particles.x[index] - 0.2
-#            if (y > self.particles.y[index]):
-#                vel = (self.particles.u[index], self.particles.v[index])
-#                loc = (self.particles.x[index] - vel[0] * 1e-5,
-#                       self.particles.y[index] - vel[1] * 1e-5)
-#                if (loc[1] + 0.2 < loc[0] or loc[0] < 0.0 or loc[1] < 0.0 or 
-#                    loc[0] > 1.0 or loc[1] > 1.0):
-#                    flag = True
-#                else:
-#                    flag = False
-#                print "not reflected index loc vel flag  = ", index, loc, vel, flag
+            
+            # just for testing purpose
             if (self.particles.get_x(index) < 0.0 or self.particles.get_y(index) < 0.0
             or self.particles.get_x(index) > 1.0 or self.particles.get_y(index) > 1.0):
                 print "index loc vel cuurent_loc = ", index, loc, vel, current_loc
+            
             cell_index = self.cells.find_cell_index(self.particles.get_x(index), 
                                                     self.particles.get_y(index))
             if cell_index == None:

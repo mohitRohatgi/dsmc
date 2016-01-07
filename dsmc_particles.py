@@ -20,7 +20,8 @@ class Domain:
         self.surface = []
         self.volume = 0.0
         self.surface_temp = 0.0
-        if inlet == None and outlet == None:
+        if (inlet == None or len(inlet) == 0) and (
+            outlet == None or len(outlet == 0)):
             self.bool = False
         else:
             self.bool = True
