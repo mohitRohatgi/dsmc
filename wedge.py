@@ -16,27 +16,17 @@ from time import time
 
 
 def main():
-#    inlet = [((0.0, 0.0), (0.0, 1.0))]
-#    outlet = [((1.0, 1.0), (1.0, 0.8))]
-#    zero_grad  = [((0.2, 0.0), (0.0, 0.0)), ((0.0, 1.0), (1.0, 1.0))]
-#    surface = ((0.2, 0.0), (1.0, 0.8))
-#    surface_temp = 300.0
-#    volume = 0.68
-#
-#    domain = dm_p.Domain(inlet, zero_grad, outlet)
-##    domain.set_surface(surface, surface_temp)
-#    domain.set_surface(surface)
-#    domain.set_volume(volume)
-
-    surface = ((0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0), (0.0, 0.0))
+    inlet = [((0.0, 0.0), (0.0, 1.0))]
+    outlet = [((1.0, 1.0), (1.0, 0.8))]
+    zero_grad  = [((0.2, 0.0), (0.0, 0.0)), ((0.0, 1.0), (1.0, 1.0))]
+    surface = ((0.2, 0.0), (1.0, 0.8))
 #    surface_temp = 300.0
     
     center = (0.5,0.5)
     length = 1.0
     width = 1.0
-    volume = 1.0
-    
-    domain = dm_p.Domain()
+    volume = 0.68
+    domain = dm_p.Domain(inlet, zero_grad, outlet)
     domain.set_surface(surface)
 #    domain.set_surface(surface, surface_temp)
     domain.set_volume(volume)
@@ -49,7 +39,7 @@ def main():
     viscosity_index = 0.81
     mole_fraction = [0.5, 0.5]
     dia = 4.17e-10
-    mach = [0.0, 0.0, 0.0]
+    mach = [2.5, 0.0, 0.0]
     temperature = 500.0
     ref_temperature = 273.0
     number_density = 1.699e19

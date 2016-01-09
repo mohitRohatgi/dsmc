@@ -5,8 +5,7 @@ import dsmc_particles as dm_p
 # this is the top level manager which woud be responsible for the boundary 
 # condition implementation.
 class BoundaryManager:
-    def __init__(self, cells, detector, domain, n_particles_in_cell,
-                 mole_fraction, temperature, particles, gas):
+    def __init__(self, cells, domain, gas, particles, n_particles_in_cell):
         self.gas = gas
         self.boundary = BoundaryGenerator(cells, domain).get_boundary()
         
@@ -15,15 +14,14 @@ class BoundaryManager:
         
         self.in_detector = InParticleDetector(cells)
         self.modifier = ParticleModifier(particles)
-        self.run([])
     
     
-    def run(self, particles_out):
+    def run(self, particles_out, dt):
         self.particle_generator.run()
         inlet_particles = self.particle_generator.get_inlet_particles()
         zero_grad_particles = self.particle_generator.get_zero_grad_particles()
-        self.in_detector.detect(inlet_particles)
-        self.in_detector.detect(zero_grad_particles)
+        self.in_detector.detect(inlet_particles, dt)
+        self.in_detector.detect(zero_grad_particles, dt)
         self.modifier.run(self.in_detector, particles_out)
 
 
@@ -218,8 +216,28 @@ class ParticleGenerator:
 
 # this class would detect the particles that went inside the domain.
 class InParticleDetector:
-    def __init__(self, detector):
-        pass
+    def __init__(self, cells):
+        self.cells = cells
+        self.particle_map = {}
+    
+    
+    def detect(self, particles, dt):
+        particles_out = []
+        for index in range(len(particles.get_x())):
+            x = particles.get_x(index) + particles.get_velx(index) * dt
+            y = particles.get_x(index) + particles.get_vely(index) * dt
+            if self.cells.is_inside_domain(x, y):
+                particles_out.append(index)
+        if len(particles_out) > 0:
+            self.particle_map[particles] = particles_out
+    
+    
+    def get_particles_in(self, particles):
+        return self.particle_map[particles]
+    
+    
+    def get_particles(self):
+        return self.particle_map.keys()
 
 
 
@@ -227,11 +245,66 @@ class InParticleDetector:
 # according to the boundary conditions.
 class ParticleModifier:
     def __init__(self, particles):
-        pass
+        self.particles = particles
     
     
-    def run(in_detector, particles_out):
-        pass
+    def run(self, in_detector, particles_out):
+        for b_particles in in_detector.get_particles():
+            particles_in = in_detector.get_particles_in(b_particles)
+            while (len(particles_in) > 0):
+                particle_in = particles_in.pop()
+                try:
+                    particle_out = particles_out.pop()
+                    self._modify_particles(b_particles, particle_in, particle_out)
+                except:
+                    particles_in.append(particle_in)
+                    self._add_particles(b_particles, particles_in)
+                    break
+    
+    
+    def _modify_particles(self, b_particles, particle_in, particle_out):
+        self.particles.x[particle_out] = b_particles.x[particle_in]
+        self.particles.y[particle_out] = b_particles.y[particle_in]
+        self.particles.u[particle_out] = b_particles.u[particle_in]
+        self.particles.v[particle_out] = b_particles.v[particle_in]
+        self.particles.w[particle_out] = b_particles.w[particle_in]
+        self.particles.mpv[particle_out] = b_particles.mpv[particle_in]
+        self.particles.tag[particle_out] = b_particles.tag[particle_in]
+    
+    
+    def _add_particles(self, b_particles, particles_in):
+        length = len(particles_in)
+        x = np.zeros(length)
+        y = np.zeros(length)
+        u = np.zeros(length)
+        v = np.zeros(length)
+        w = np.zeros(length)
+        eu = np.zeros(length)
+        ev = np.zeros(length)
+        ew = np.zeros(length)
+        mpv = np.ones(length)
+        tag = np.ones(length, dtype = int)
+        
+        # energy would be computed when required. So, there is no point in 
+        # saving it here.
+        for index in range(length):
+            x[index] = b_particles.x[index]
+            u[index] = b_particles.u[index]
+            v[index] = b_particles.v[index]
+            w[index] = b_particles.w[index]
+            mpv[index] = b_particles.mpv[index]
+            tag[index] = b_particles.tag[index]
+        self.particles.x = np.concatenate((self.particles.x, x))
+        self.particles.y = np.concatenate((self.particles.y, y))
+        self.particles.u = np.concatenate((self.particles.u, u))
+        self.particles.v = np.concatenate((self.particles.v, v))
+        self.particles.w = np.concatenate((self.particles.w, w))
+        self.particles.eu = np.concatenate((self.particles.eu, eu))
+        self.particles.ev = np.concatenate((self.particles.ev, ev))
+        self.particles.ew = np.concatenate((self.particles.ew, ew))
+        self.particles.mpv = np.concatenate((self.particles.mpv, mpv))
+        self.particles.tag = np.concatenate((self.particles.tag, tag))
+                
 
 
 

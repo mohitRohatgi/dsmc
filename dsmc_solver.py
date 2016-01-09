@@ -32,16 +32,17 @@ class DsmcSolver:
                                 gas.get_n_species(), self.particles, n_steps)
         
         self.flag = False
-        if (domain.is_open()):
-            self.flag = True
-            self.boundary = dm_b.Boundary(cells, gas, domain, n_particles_in_cell,
-                                      self.particles, ref_point)
         self.movement_manager = dm_r.MovementManager(self.particles,
                                                      domain.get_surface())
         self.dt = dt
         self.temperature = np.zeros(len(cells.get_temperature()))
         self.number_density = np.zeros((gas.get_n_species(), 
                                         len(cells.get_temperature())))
+        if (domain.is_open()):
+            self.flag = True
+            self.boundary_manager = dm_b.BoundaryManager(cells, domain, gas, 
+                                        self.particles, n_particles_in_cell)
+            self.boundary_manager.run([], self.dt)
     
     
     def run(self, detector_key, collider_key, reflection_key):
@@ -52,7 +53,7 @@ class DsmcSolver:
             self.collision_manager.run(collider_key, detector_key)
             self.sampling_manager.run()
             if (self.flag):
-                self.boundary.run(self.dt)
+                self.boundary_manager.run(self.distributor.get_particles_out, self.dt)
         self.temperature = self.sampling_manager.get_temperature()
         self.number_density = self.sampling_manager.get_number_density()
         constt = 0.0

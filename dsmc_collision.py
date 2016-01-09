@@ -200,8 +200,8 @@ class CollisionDetector:
         d_ref = mean(self.particles.get_dia(pair[0]), self.particles.get_dia(pair[1]))
         T_ref = mean(self.particles.get_ref_temp(pair[0]), 
                      self.particles.get_ref_temp(pair[1]))
-        omega_ref = mean(self.particles.visc_index[pair[0]], 
-                         self.particles.visc_index[pair[1]])
+        omega_ref = mean(self.particles.get_visc_index(pair[0]), 
+                         self.particles.get_visc_index(pair[1]))
         
         k = 1.3806488e-23
         constt = (2.0 * k * T_ref / self.reduced_mass

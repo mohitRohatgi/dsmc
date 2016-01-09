@@ -63,7 +63,7 @@ class ParticleInitialiser:
     
     def init_particles(self, cells, cells_in):
         self._init_location(cells, cells_in)
-        self._init_velocity(self.particles.get_mpv())
+        self._init_velocity()
     
     
     def _init_location(self, cells, cells_in, offset=0):
@@ -82,7 +82,7 @@ class ParticleInitialiser:
     
     
     # c is the speed of sound.
-    def _init_velocity(self, mpv):
+    def _init_velocity(self):
         k = 1.3806488e-23
         c = np.sqrt(self.gas.get_gamma() * self.gas.get_temperature() * k / 
                     self.gas.get_mass())
@@ -90,6 +90,7 @@ class ParticleInitialiser:
         c2 = np.random.normal(0.0, 0.5, self.particles.get_particles_count())
         c3 = np.random.normal(0.0, 0.5, self.particles.get_particles_count())
         
+        mpv = self.particles.get_mpv()        
         self.particles.set_velx(c1 * mpv + self.gas.get_mach_x() * c)
         self.particles.set_vely(c2 * mpv + self.gas.get_mach_y() * c)
         self.particles.set_velz(c3 * mpv + self.gas.get_mach_z() * c)

@@ -67,7 +67,7 @@ class RectCells:
     
     # assuming constant cell length and cell width.
     def find_cell_index(self, x, y):
-        if (self._inside_domain(x, y)):
+        if (self.is_inside_domain(x, y)):
             x = x - self.datum[0]
             y = y - self.datum[1]
             cell_index = int(y / self.cell_width) * self.n_x
@@ -109,7 +109,7 @@ class RectCells:
             y = self.datum[1] - self.cell_width / 2.0
         else:
             y = self.y_max + self.cell_width / 2.0
-        return RectCells(round(dist / self.cell_length), 1, dist, 
+        return RectCells(int(round(dist / self.cell_length)), 1, dist, 
                          self.cell_width, (x, y), self.n_species)
     
     # this function is another helper function to generate_cell.
@@ -124,7 +124,7 @@ class RectCells:
         else:
             x = self.x_max + self.cell_length / 2.0
         
-        return RectCells(1, round(dist / self.cell_width), self.cell_length,
+        return RectCells(1, int(round(dist / self.cell_width)), self.cell_length,
                          dist, (x, y), self.n_species)
     
     
@@ -140,7 +140,7 @@ class RectCells:
             self.yc[i] = y_lower_left +  self.cell_width * i
     
     
-    def _inside_domain(self, x, y):
+    def is_inside_domain(self, x, y):
         if (x < self.datum[0] or y < self.datum[1] or
             x > self.x_max or y > self.y_max):
             return False
@@ -322,15 +322,15 @@ class Distributor:
         self.cells.reset_particles()
         self.particles_out = []
         for index in range(len(self.particles.x)):
-            vel = (self.particles.get_velx(index), self.particles.get_vely(index))
-            loc = (self.particles.get_x(index) - vel[0] * 1e-5,
-                   self.particles.get_y(index) - vel[1] * 1e-5)
-            current_loc = (self.particles.get_x(index), self.particles.get_y(index))
-            
-            # just for testing purpose
-            if (self.particles.get_x(index) < 0.0 or self.particles.get_y(index) < 0.0
-            or self.particles.get_x(index) > 1.0 or self.particles.get_y(index) > 1.0):
-                print "index loc vel cuurent_loc = ", index, loc, vel, current_loc
+#            vel = (self.particles.get_velx(index), self.particles.get_vely(index))
+#            loc = (self.particles.get_x(index) - vel[0] * 1e-5,
+#                   self.particles.get_y(index) - vel[1] * 1e-5)
+#            current_loc = (self.particles.get_x(index), self.particles.get_y(index))
+#            
+#            # just for testing purpose
+#            if (self.particles.get_x(index) < 0.0 or self.particles.get_y(index) < 0.0
+#            or self.particles.get_x(index) > 1.0 or self.particles.get_y(index) > 1.0):
+#                print "index loc vel cuurent_loc = ", index, loc, vel, current_loc
             
             cell_index = self.cells.find_cell_index(self.particles.get_x(index), 
                                                     self.particles.get_y(index))

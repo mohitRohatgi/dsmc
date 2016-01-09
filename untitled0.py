@@ -410,11 +410,6 @@ class ParticleModifier:
         
         for index in range(length):
             x[index] = b_particles.x[b_particles_index[index]]
-#            if x[index] < 0.0:
-#                print "x = ", x[index], index
-#            y[index] = b_particles.y[b_particles_index[index]]
-#            if y[index] < 0.0:
-#                print "y = ", y[index], index
             u[index] = b_particles.u[b_particles_index[index]]
             v[index] = b_particles.v[b_particles_index[index]]
             w[index] = b_particles.w[b_particles_index[index]]
