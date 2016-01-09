@@ -17,12 +17,13 @@ class Initialiser:
     def run(cells, gas, domain, n_particles_in_cell, ref_point):
         cell_detector = CellDetector(cells, domain.get_surface(), ref_point)
         cells_in = cell_detector.detect_all()
-        particles = dm_p.Particles(n_particles_in_cell * len(cells_in))
-        particles.setup(domain.get_volume(), gas.get_mol_frac(), gas.get_number_density(),
-                             gas.get_species(), gas.get_mpv())
-        particle_initialiser = ParticleInitialiser(particles, cells, cells_in,
-                                                     n_particles_in_cell, gas)
-        particle_initialiser.run()
+        num = n_particles_in_cell * len(cells_in)
+        particles = dm_p.Particles(num,
+                    gas.get_number_density() * domain.get_volume() / num)
+        particles.setup(gas.get_mol_frac(), gas.get_species(), gas.get_mpv())
+        particle_initialiser = ParticleInitialiser(particles, 
+                                                   n_particles_in_cell, gas)
+        particle_initialiser.run(cells, cells_in)
         distributor = dm_c.Distributor(cells, particles)
         distributor.distribute_all_particles()
         sampler = dm_s.Instant_sampler(cells, cells_in, particles, 
@@ -49,63 +50,61 @@ class CellDetector:
 
 
 class ParticleInitialiser:
-    def __init__(self, particles, cells, cells_in, n_particles_in_cell, gas):
+    def __init__(self, particles, n_particles_in_cell, gas):
         self.particles = particles
-        self.cells = cells
-        self.cells_in = cells_in
         self.n_particles_in_cell = int(n_particles_in_cell)
         self.gas = gas
     
     
-    def run(self):
-        self._initialise_location()
-        self._initialise_velocity(self.particles.get_mpv())
-        self._initialise_cells()
+    def run(self, cells, cells_in):
+        self.init_particles(cells, cells_in)
+        self._init_cells(cells, cells_in)
     
     
-    def _initialise_location(self):
-        for index1, cell_index in enumerate(self.cells_in):
-            xc, yc = self.cells.get_center(cell_index)
+    def init_particles(self, cells, cells_in):
+        self._init_location(cells, cells_in)
+        self._init_velocity(self.particles.get_mpv())
+    
+    
+    def _init_location(self, cells, cells_in, offset=0):
+        for index1, cell_index in enumerate(cells_in):
+            xc, yc = cells.get_center(cell_index)
+            index = index1 * self.n_particles_in_cell + offset
             for i in range(self.n_particles_in_cell):
-                index = index1 * self.n_particles_in_cell + i
-                
                 constt = ((2.0 * np.random.rand() - 1) / 2.0 * 
-                        self.cells.get_cell_length(index) + xc)
-                self.particles.set_x(constt, index)
+                            cells.get_cell_length(index + i) + xc)
+                self.particles.set_x(constt, index + i)
                 
                 constt = ((2.0 * np.random.rand() - 1) / 2.0 *
-                        self.cells.get_cell_width(index) + yc)
-                self.particles.set_y(constt, index)
+                        cells.get_cell_width(index + i) + yc)
+                self.particles.set_y(constt, index + i)
+        return index + self.n_particles_in_cell
     
     
-    def _initialise_cells(self):
+    # c is the speed of sound.
+    def _init_velocity(self, mpv):
+        k = 1.3806488e-23
+        c = np.sqrt(self.gas.get_gamma() * self.gas.get_temperature() * k / 
+                    self.gas.get_mass())
+        c1 = np.random.normal(0.0, 0.5, self.particles.get_particles_count())
+        c2 = np.random.normal(0.0, 0.5, self.particles.get_particles_count())
+        c3 = np.random.normal(0.0, 0.5, self.particles.get_particles_count())
+        
+        self.particles.set_velx(c1 * mpv + self.gas.get_mach_x() * c)
+        self.particles.set_vely(c2 * mpv + self.gas.get_mach_y() * c)
+        self.particles.set_velz(c3 * mpv + self.gas.get_mach_z() * c)
+    
+    
+    def _init_cells(self, cells, cells_in):
         c = np.sqrt(self.gas.get_temperature() * self.gas.get_gamma() * 8.314)
         
         n_particles = (self.n_particles_in_cell * np.array(self.gas.get_mol_frac()))
         
-        for index in self.cells_in:
-            self.cells.set_temperature(self.gas.get_temperature(), index)
+        for index in cells_in:
+            cells.set_temperature(self.gas.get_temperature(), index)
             
             for tag in range(len(self.gas.get_species())):
-                self.cells.set_n_particles(n_particles[tag], tag, index)
+                cells.set_n_particles(n_particles[tag], tag, index)
             
-            self.cells.set_velx(self.gas.get_mach_x() * c, index)
-            self.cells.set_vely(self.gas.get_mach_y() * c, index)
-        
-    
-    
-    # c is the speed of sound.
-    def _initialise_velocity(self, mpv):
-        k = 1.3806488e-23
-        c = np.sqrt(self.gas.get_gamma() * self.gas.get_temperature() * k / 
-            self.gas.get_mass())
-        c1 = np.random.normal(0.0, 0.5, self.particles.get_particles_count())
-        c2 = np.random.normal(0.0, 0.5, self.particles.get_particles_count())
-        c3 = np.random.normal(0.0, 0.5, self.particles.get_particles_count())
-        self.particles.set_velx(c1 * mpv)
-        self.particles.set_vely(c2 * mpv)
-        self.particles.set_velz(c3 * mpv)
-        
-        self.particles.set_velx(self.particles.get_velx()+(self.gas.get_mach_x()*c))
-        self.particles.set_vely(self.particles.get_vely()+(self.gas.get_mach_y()*c))
-        self.particles.set_velz(self.particles.get_velz()+(self.gas.get_mach_z()*c))
+            cells.set_velx(self.gas.get_mach_x() * c, index)
+            cells.set_vely(self.gas.get_mach_y() * c, index)

@@ -67,7 +67,6 @@ class RectCells:
     
     # assuming constant cell length and cell width.
     def find_cell_index(self, x, y):
-        print self.datum
         if (self._inside_domain(x, y)):
             x = x - self.datum[0]
             y = y - self.datum[1]

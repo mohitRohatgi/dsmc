@@ -58,10 +58,7 @@ class TestBoundaryGenerator(unittest.TestCase):
             self.assertEqual(inlet_cell.n_x, 1)
             self.assertAlmostEqual(inlet_cell.get_center(4)[0], -2.2, 6)            
             self.assertAlmostEqual(inlet_cell.get_center(4)[1], -0.1, 6)
-            print boundary.get_adj_map(inlet_cell)
-        
-        for zero_cell in boundary.zero_grad_cells:
-            print boundary.get_adj_map(zero_cell)
+
         
 
 if __name__ == '__main__':

@@ -128,208 +128,6 @@ class Molecules:
         return self.visc_coeff
 
 
-# tag represents the species type of particle.
-# particles are stored in an ascending order of the species.
-# for eg. species 1 would be stored in the first n1 particles the species2 for
-# the next n2 particles and so on.
-class Particles:
-    def __init__(self, n_particles):
-        self.x = np.zeros(n_particles)
-        self.y = np.zeros(n_particles)
-        self.u = np.zeros(n_particles)
-        self.v = np.zeros(n_particles)
-        self.w = np.zeros(n_particles)
-        self.eu = np.zeros(n_particles)
-        self.ev = np.zeros(n_particles)
-        self.ew = np.zeros(n_particles)
-        self.mass = np.ones(n_particles)
-        self.dia = np.ones(n_particles)
-        self.cross_area = np.ones(n_particles)
-        self.visc_index = np.ones(n_particles)
-        self.ref_temp = np.ones(n_particles)
-        self.viscosity_coeff = np.ones(n_particles)
-        self.dof = np.ones(n_particles)
-        self.gamma = np.ones(n_particles)
-        self.mpv = np.ones(n_particles)
-        self.num = n_particles
-        self.n_eff = 0.0
-        self.tag = np.zeros(n_particles, dtype = int)
-
-
-    # this function should only be called once.
-    # sets the particles according to the molecules it represents.
-    def setup(self, domain_volume, mole_fraction, number_density, species, mpv):
-        n_species = len(mole_fraction)
-        self.n_eff = number_density * domain_volume / self.num
-        for index in range(self.num):
-            tag = index % n_species
-            self.mass[index] = species[tag].get_mass()
-            self.dia[index] = species[tag].get_dia()
-            self.cross_area[index] = 0.25 * np.pi * species[tag].get_dia() ** 2.0
-            self.visc_index[index] = species[tag].get_visc_index()
-            self.ref_temp[index] = species[tag].get_ref_temp()
-            self.viscosity_coeff[index] = species[tag].get_visc_coeff()
-            self.dof[index] = species[tag].get_dof()
-            self.gamma[index] = species[tag].get_gamma()
-            self.mpv[index] = mpv[tag]
-            self.tag[index] = tag
-
-
-    def move_all(self, dt):
-        self.x += self.u * dt
-        self.y += self.v * dt
-    
-    
-    def move_sub(self, dt, particle_list):
-        for index in particle_list:
-            self.move(index, dt)
-         
-    
-    def move(self, index, dt):
-        self.x[index] += self.u[index] * dt
-        self.y[index] += self.v[index] * dt
-    
-    
-    def randomize_location(self):
-        self.x = np.random.rand(self.n_particles)
-        self.y = np.random.rand(self.n_particles)
-    
-    
-    def compute_energy(self):
-        self.eu = self.u * self.u * self.mass
-        self.ev = self.v * self.v * self.mass
-        self.ew = self.w * self.w * self.mass
-    
-    
-    def get_tag(self, index):
-        return self.tag[index]
-    
-    
-    def get_dia(self, index=None):
-        if index == None:
-            return self.dia
-        else:
-            return self.dia[index]
-    
-    
-    def get_mass(self, index):
-        return self.mass[index]
-    
-    
-    def get_eu(self, index):
-        if index == None:
-            return self.eu
-        else:
-            return self.eu[index]
-    
-    
-    def get_ev(self, index):
-        if index == None:
-            return self.ev
-        else:
-            return self.ev[index]
-    
-    
-    def get_ew(self, index):
-        if index == None:
-            return self.ew
-        else:
-            return self.ew[index]
-    
-    
-    def get_n_eff(self):
-        return self.n_eff
-    
-    
-    def get_ref_temp(self, index):
-        return self.ref_temp[index]
-    
-    
-    def get_visc_index(self, index):
-        return self.visc_index[index]
-    
-    
-    def get_mpv(self, index=None):
-        if index == None:
-            return self.mpv
-        else:
-            return self.mpv[index]
-    
-    
-    def get_particles_count(self):
-        return self.num
-    
-    
-    def get_x(self, index=None):
-        if index == None:
-            return self.x
-        else:
-            return self.x[index]
-    
-    
-    def set_x(self, x, index=None):
-        if index == None:
-            self.x = x
-        else:
-            self.x[index] = x
-    
-    
-    def get_y(self, index=None):
-        if index == None:
-            return self.y
-        else:
-            return self.y[index]
-    
-    
-    def set_y(self, y, index=None):
-        if index == None:
-            self.y = y
-        else:
-            self.y[index] = y
-    
-    
-    def get_velx(self, index=None):
-        if index == None:
-            return self.u
-        else:
-            return self.u[index]
-    
-    
-    def set_velx(self, velx, index=None):
-        if index == None:
-            self.u = velx
-        else:
-            self.u[index] = velx
-    
-    
-    def get_vely(self, index=None):
-        if index == None:
-            return self.v
-        else:
-            return self.v[index]
-    
-    
-    def set_vely(self, vely, index=None):
-        if index == None:
-            self.v = vely
-        else:
-            self.v[index] = vely
-    
-    
-    def get_velz(self, index=None):
-        if index == None:
-            return self.w
-        else:
-            return self.w[index]
-    
-    
-    def set_velz(self, velz, index=None):
-        if index == None:
-            self.w = velz
-        else:
-            self.w[index] = velz
-
-
 
 # mol_frac should be wraapped up in a list.
 # species should organised in ascending order w.r.t. tag.
@@ -483,3 +281,212 @@ class Gas:
                                         k * np.pi / self.reduced_mass)
             self.mean_col_time[index1] = 1 / self.mean_col_rate[index1]
 #            print "col_rate = ", self.mean_col_rate[index1]
+
+
+# tag represents the species type of particle.
+# particles are stored in an ascending order of the species.
+# for eg. species 1 would be stored in the first n1 particles the species2 for
+# the next n2 particles and so on.
+class Particles:
+    def __init__(self, n_particles, n_eff=0.0):
+        self.x = np.zeros(n_particles)
+        self.y = np.zeros(n_particles)
+        self.u = np.zeros(n_particles)
+        self.v = np.zeros(n_particles)
+        self.w = np.zeros(n_particles)
+        self.eu = np.zeros(n_particles)
+        self.ev = np.zeros(n_particles)
+        self.ew = np.zeros(n_particles)
+        self.mass = np.ones(n_particles)
+        self.dia = np.ones(n_particles)
+        self.cross_area = np.ones(n_particles)
+        self.visc_index = np.ones(n_particles)
+        self.ref_temp = np.ones(n_particles)
+        self.viscosity_coeff = np.ones(n_particles)
+        self.dof = np.ones(n_particles)
+        self.gamma = np.ones(n_particles)
+        self.mpv = np.ones(n_particles)
+        self.num = n_particles
+        self.n_eff = n_eff
+        self.tag = np.zeros(n_particles, dtype = int)
+
+
+    # this function should only be called once.
+    # sets the particles according to the molecules it represents.
+    # species is a list of molecule instances.
+    def setup(self, mole_fraction, species, mpv):
+        n_species = len(mole_fraction)
+        for index in range(self.num):
+            tag = index % n_species
+            self.mass[index] = species[tag].get_mass()
+            self.dia[index] = species[tag].get_dia()
+            self.cross_area[index] = 0.25 * np.pi * species[tag].get_dia() ** 2.0
+            self.visc_index[index] = species[tag].get_visc_index()
+            self.ref_temp[index] = species[tag].get_ref_temp()
+            self.viscosity_coeff[index] = species[tag].get_visc_coeff()
+            self.dof[index] = species[tag].get_dof()
+            self.gamma[index] = species[tag].get_gamma()
+            self.mpv[index] = mpv[tag]
+            self.tag[index] = tag
+
+
+    def move_all(self, dt):
+        self.x += self.u * dt
+        self.y += self.v * dt
+    
+    
+    def move_sub(self, dt, particle_list):
+        for index in particle_list:
+            self.move(index, dt)
+         
+    
+    def move(self, index, dt):
+        self.x[index] += self.u[index] * dt
+        self.y[index] += self.v[index] * dt
+    
+    
+    def randomize_location(self):
+        self.x = np.random.rand(self.n_particles)
+        self.y = np.random.rand(self.n_particles)
+    
+    
+    def compute_energy(self):
+        self.eu = self.u * self.u * self.mass
+        self.ev = self.v * self.v * self.mass
+        self.ew = self.w * self.w * self.mass
+    
+    
+    def get_tag(self, index):
+        return self.tag[index]
+    
+    
+    def get_dia(self, index=None):
+        if index == None:
+            return self.dia
+        else:
+            return self.dia[index]
+    
+    
+    def get_gamma(self, index=None):
+        if index == None:
+            return self.gamma
+        else:
+            return self.gamma[index]
+    
+    
+    def get_mass(self, index):
+        return self.mass[index]
+    
+    
+    def get_eu(self, index):
+        if index == None:
+            return self.eu
+        else:
+            return self.eu[index]
+    
+    
+    def get_ev(self, index):
+        if index == None:
+            return self.ev
+        else:
+            return self.ev[index]
+    
+    
+    def get_ew(self, index):
+        if index == None:
+            return self.ew
+        else:
+            return self.ew[index]
+    
+    
+    def get_n_eff(self):
+        return self.n_eff
+    
+    
+    def get_ref_temp(self, index):
+        return self.ref_temp[index]
+    
+    
+    def get_visc_index(self, index):
+        return self.visc_index[index]
+    
+    
+    def get_mpv(self, index=None):
+        if index == None:
+            return self.mpv
+        else:
+            return self.mpv[index]
+    
+    
+    def get_particles_count(self):
+        return self.num
+    
+    
+    def get_x(self, index=None):
+        if index == None:
+            return self.x
+        else:
+            return self.x[index]
+    
+    
+    def set_x(self, x, index=None):
+        if index == None:
+            self.x = x
+        else:
+            self.x[index] = x
+    
+    
+    def get_y(self, index=None):
+        if index == None:
+            return self.y
+        else:
+            return self.y[index]
+    
+    
+    def set_y(self, y, index=None):
+        if index == None:
+            self.y = y
+        else:
+            self.y[index] = y
+    
+    
+    def get_velx(self, index=None):
+        if index == None:
+            return self.u
+        else:
+            return self.u[index]
+    
+    
+    def set_velx(self, velx, index=None):
+        if index == None:
+            self.u = velx
+        else:
+            self.u[index] = velx
+    
+    
+    def get_vely(self, index=None):
+        if index == None:
+            return self.v
+        else:
+            return self.v[index]
+    
+    
+    def set_vely(self, vely, index=None):
+        if index == None:
+            self.v = vely
+        else:
+            self.v[index] = vely
+    
+    
+    def get_velz(self, index=None):
+        if index == None:
+            return self.w
+        else:
+            return self.w[index]
+    
+    
+    def set_velz(self, velz, index=None):
+        if index == None:
+            self.w = velz
+        else:
+            self.w[index] = velz

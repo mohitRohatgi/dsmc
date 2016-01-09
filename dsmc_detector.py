@@ -10,7 +10,7 @@ import numpy as np
 
 # this checks whether the particular particle would intersect with the surface.
 # If it intersects, it stores the por, intersecting time and the index of the
-# surface it gets reflected from. 
+# surface it gets reflected from.
 class IntersectionDetector:
     def __init__(self, surface):
         self.surface = surface

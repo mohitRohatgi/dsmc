@@ -188,12 +188,15 @@ class CollisionDetector:
         u_rel = self.particles.get_velx(index1) - self.particles.get_velx(index2)
         v_rel = self.particles.get_vely(index1) - self.particles.get_vely(index2)
         w_rel = self.particles.get_velz(index1) - self.particles.get_velz(index2)
-        relative_speed =  np.sqrt(u_rel ** 2  + v_rel ** 2 + w_rel ** 2)
+        relative_speed =  np.sqrt(u_rel ** 2.0  + v_rel ** 2.0 + w_rel ** 2.0)
         return (relative_speed)
     
     
     # this function finds the collision area and updates the max collision area.
     def _find_col_area(self, pair, cell_index, relative_speed):
+        if np.abs(relative_speed) < 1.0e-8:
+            return 0.0
+        
         d_ref = mean(self.particles.get_dia(pair[0]), self.particles.get_dia(pair[1]))
         T_ref = mean(self.particles.get_ref_temp(pair[0]), 
                      self.particles.get_ref_temp(pair[1]))
@@ -201,10 +204,10 @@ class CollisionDetector:
                          self.particles.visc_index[pair[1]])
         
         k = 1.3806488e-23
-        constt1 = (2.0 * k * T_ref / self.reduced_mass
+        constt = (2.0 * k * T_ref / self.reduced_mass
                     / (relative_speed ** 2.0)) ** (omega_ref - 0.5)
-        constt1 /= math.gamma(2.5 - omega_ref)
-        col_area = relative_speed*(0.5*np.pi*d_ref ** 2.0)*constt1			
+        constt /= math.gamma(2.5 - omega_ref)
+        col_area = relative_speed * (0.5 * np.pi * d_ref ** 2.0) * constt			
         
         
         if (self.ref_max_area[cell_index] < col_area):
@@ -250,7 +253,8 @@ class VhsCollider():
         self.rel_speed = rel_speed
         if len(self.collision_pairs) > 0:
             self._vhs(0, len(self.collision_pairs) - 1)
-            print "collided in the time step"
+            print ("collided in the time step", " # of particles collided = ", 
+                   len(self.collision_pairs))
         else: 
             print "no collision in the time step"
     
