@@ -321,17 +321,7 @@ class Distributor:
     def distribute_all_particles(self):
         self.cells.reset_particles()
         self.particles_out = []
-        for index in range(len(self.particles.x)):
-#            vel = (self.particles.get_velx(index), self.particles.get_vely(index))
-#            loc = (self.particles.get_x(index) - vel[0] * 1e-5,
-#                   self.particles.get_y(index) - vel[1] * 1e-5)
-#            current_loc = (self.particles.get_x(index), self.particles.get_y(index))
-#            
-#            # just for testing purpose
-#            if (self.particles.get_x(index) < 0.0 or self.particles.get_y(index) < 0.0
-#            or self.particles.get_x(index) > 1.0 or self.particles.get_y(index) > 1.0):
-#                print "index loc vel cuurent_loc = ", index, loc, vel, current_loc
-            
+        for index in range(len(self.particles.x)):            
             cell_index = self.cells.find_cell_index(self.particles.get_x(index), 
                                                     self.particles.get_y(index))
             if cell_index == None:

@@ -32,14 +32,14 @@ def main():
     domain.set_volume(volume)
     
 #    ensemble_sample = 10
-    time_av_sample = 10
+    time_av_sample = 100
     dof = 3.0
     mass = 66.3e-27
     viscosity_coeff = 2.117
     viscosity_index = 0.81
     mole_fraction = [0.5, 0.5]
     dia = 4.17e-10
-    mach = [0.3, 0.0, 0.0]
+    mach = [2.5, 0.0, 0.0]
     temperature = 500.0
     ref_temperature = 273.0
     number_density = 1.699e19
@@ -57,7 +57,7 @@ def main():
     dt = 1.0e-5
 #    print dt
 #    cell_x, cell_y = np.ceil(length / dl), np.ceil(width / dl)
-    cell_x, cell_y = 10, 10
+    cell_x, cell_y = 20, 20
     cells = dm_c.RectCells(cell_x, cell_y, length, width, center, 2)
     
     start_time = time()
@@ -76,8 +76,8 @@ def main():
     num_den_msg = 'this file contains number density( x1e19 ) of each cell'
     temp_msg = 'this file contains temperature of each cell'
     
-    dump_output('box_temperature.txt', temperature,  temp_msg)
-    dump_output('box_number_density.txt', number_density / 1e19, num_den_msg)
+    dump_output('wedge_super_temperature.txt', temperature,  temp_msg)
+    dump_output('wedge_super_number_density.txt', number_density / 1e19, num_den_msg)
 
 
 

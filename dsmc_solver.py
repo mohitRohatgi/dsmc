@@ -54,7 +54,6 @@ class DsmcSolver:
             self.sampling_manager.run()
             if (self.flag):
                 particles_out = self.distributor.get_particles_out()
-                print "# of particles out = ", len(particles_out)
                 self.boundary_manager.run(particles_out, self.dt)
         self.temperature = self.sampling_manager.get_temperature()
         self.number_density = self.sampling_manager.get_number_density()

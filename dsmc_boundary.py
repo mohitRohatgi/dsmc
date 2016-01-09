@@ -262,7 +262,6 @@ class ParticleModifier:
                     particles_in.append(particle_in)
                     self._add_particles(b_particles, particles_in)
                     break
-        print "# of particles in = ", count
     
     
     def _modify_particles(self, b_particles, particle_in, particle_out):
