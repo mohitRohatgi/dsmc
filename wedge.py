@@ -39,12 +39,12 @@ def main():
     viscosity_index = 0.81
     mole_fraction = [0.5, 0.5]
     dia = 4.17e-10
-    mach = [2.5, 0.0, 0.0]
+    mach = [0.3, 0.0, 0.0]
     temperature = 500.0
     ref_temperature = 273.0
     number_density = 1.699e19
     gamma = 5.0 / 3.0
-    n_particles_in_cell = 10
+    n_particles_in_cell = 1000
     ref_point = (0.1, 0.5)
     argon = dm_p.Molecules(dia, viscosity_index, mass, viscosity_coeff, dof, 0,
                 ref_temperature, gamma, volume, number_density)

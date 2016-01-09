@@ -14,35 +14,38 @@ from time import time
 '_col_' denotes collision while '_f_' denotes free
 """
 
+
 def main():
-#    inlet = ((0.2, 0.0), (0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (1.0, 0.8))
-#    outlet = ((0.2, 0.0), (0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (1.0, 0.8))
-#    surface = ((0.2, 0.0), (1.0, 0.8))
-    inlet = ()
-    outlet = ()
-    surface = ((0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0), (0.0, 0.0))
+    inlet = [((0.0, 0.0), (0.0, 1.0))]
+    outlet = [((1.0, 1.0), (1.0, 0.8))]
+    zero_grad  = [((0.2, 0.0), (0.0, 0.0)), ((0.0, 1.0), (1.0, 1.0))]
+    surface = ((0.2, 0.0), (1.0, 0.8))
+#    surface_temp = 300.0
+    
     center = (0.5,0.5)
     length = 1.0
     width = 1.0
-#    volume = 0.68
-    volume = 1.0
+    volume = 0.68
+    domain = dm_p.Domain(inlet, zero_grad, outlet)
+    domain.set_surface(surface)
+#    domain.set_surface(surface, surface_temp)
+    domain.set_volume(volume)
+    
 #    ensemble_sample = 10
-    time_av_sample = 100
+    time_av_sample = 5
     dof = 3.0
     mass = 66.3e-27
     viscosity_coeff = 2.117
     viscosity_index = 0.81
     mole_fraction = [0.5, 0.5]
     dia = 4.17e-10
-    mach = [0.0, 0.0, 0.0]
+    mach = [0.3, 0.0, 0.0]
     temperature = 500.0
-    surface_temperature = 300.0
     ref_temperature = 273.0
     number_density = 1.699e19
     gamma = 5.0 / 3.0
-    n_particles_in_cell = 10000
+    n_particles_in_cell = 10
     ref_point = (0.1, 0.5)
-    domain = dm_p.Domain(inlet, outlet, surface, volume, surface_temperature)
     argon = dm_p.Molecules(dia, viscosity_index, mass, viscosity_coeff, dof, 0,
                 ref_temperature, gamma, volume, number_density)
     argon1 = dm_p.Molecules(dia, viscosity_index, mass, viscosity_coeff, dof, 1,
@@ -58,8 +61,8 @@ def main():
     cells = dm_c.RectCells(cell_x, cell_y, length, width, center, 2)
     
     start_time = time()
-    solver = dm_sol.DsmcSolver(cells, gas, domain, n_particles_in_cell, ref_point, dt,
-                        time_av_sample)
+    solver = dm_sol.DsmcSolver(cells, gas, domain, n_particles_in_cell,
+                               ref_point, dt, time_av_sample)
     solver.run(1, 1, 1)
     end_time = time()
     simulation_time = end_time - start_time

@@ -254,7 +254,8 @@ class VhsCollider():
         if len(self.collision_pairs) > 0:
             self._vhs(0, len(self.collision_pairs) - 1)
             print ("collided in the time step", " # of particles collided = ", 
-                   len(self.collision_pairs))
+                   len(self.collision_pairs), " # of particles = ", 
+                    len(self.particles.get_x()))
         else: 
             print "no collision in the time step"
     

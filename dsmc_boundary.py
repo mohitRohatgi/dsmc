@@ -249,8 +249,10 @@ class ParticleModifier:
     
     
     def run(self, in_detector, particles_out):
+        count = 0.0
         for b_particles in in_detector.get_particles():
             particles_in = in_detector.get_particles_in(b_particles)
+            count += len(particles_in)
             while (len(particles_in) > 0):
                 particle_in = particles_in.pop()
                 try:
@@ -260,6 +262,7 @@ class ParticleModifier:
                     particles_in.append(particle_in)
                     self._add_particles(b_particles, particles_in)
                     break
+        print "# of particles in = ", count
     
     
     def _modify_particles(self, b_particles, particle_in, particle_out):
@@ -289,6 +292,7 @@ class ParticleModifier:
         # saving it here.
         for index in range(length):
             x[index] = b_particles.x[index]
+            y[index] = b_particles.y[index]
             u[index] = b_particles.u[index]
             v[index] = b_particles.v[index]
             w[index] = b_particles.w[index]
