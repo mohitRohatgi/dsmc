@@ -32,7 +32,7 @@ def main():
     domain.set_volume(volume)
     
 #    ensemble_sample = 10
-    time_av_sample = 100
+    time_av_sample = 10
     dof = 3.0
     mass = 66.3e-27
     viscosity_coeff = 2.117
@@ -44,7 +44,7 @@ def main():
     ref_temperature = 273.0
     number_density = 1.699e19
     gamma = 5.0 / 3.0
-    n_particles_in_cell = 1000
+    n_particles_in_cell = 10
     ref_point = (0.1, 0.5)
     argon = dm_p.Molecules(dia, viscosity_index, mass, viscosity_coeff, dof, 0,
                 ref_temperature, gamma, volume, number_density)
@@ -68,16 +68,16 @@ def main():
     simulation_time = end_time - start_time
     print "simulation time in mins (upper bound) = ", int(simulation_time / 60) + 1
     print "simulation time in sec = ", simulation_time
-    number_density = solver.get_2d_num_den(10, 10)
+    number_density = solver.get_2d_num_den(cell_x, cell_y)
     print "number_density = ", number_density
-    temperature = solver.get_2d_temperature(10, 10)
+    temperature = solver.get_2d_temperature(cell_x, cell_y)
     print "temperature = ", temperature
     
-    num_den_msg = 'this file contains number density( x1e19 ) of each cell'
+    num_den_msg = 'this file contains number density( x1e18 ) of each cell'
     temp_msg = 'this file contains temperature of each cell'
     
     dump_output('wedge_super_temperature.txt', temperature,  temp_msg)
-    dump_output('wedge_super_number_density.txt', number_density / 1e19, num_den_msg)
+    dump_output('wedge_super_number_density.txt', number_density / 1e18, num_den_msg)
 
 
 
