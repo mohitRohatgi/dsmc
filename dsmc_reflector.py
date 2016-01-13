@@ -85,10 +85,8 @@ class Reflector:
 class Specular:
     def __init__(self, surface, particles):
         self.surface = surface
-        self.n_surface_vertices = len(surface)
         self.particles = particles
-        self.tangent_finder = dm_d.TangentFinder(surface)
-        self.surface_tangent = self.tangent_finder.get__tangent()
+        self.surface_tangent = dm_d.TangentFinder(surface).get_tangent()
         self.refl_surface = 0
     
     

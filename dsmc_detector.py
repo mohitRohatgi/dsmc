@@ -16,7 +16,7 @@ class IntersectionDetector:
         self.surface = surface
         self.dt = 0.0
         self.tangent_finder = TangentFinder(surface)
-        self.surface_tangent = self.tangent_finder.get__tangent()
+        self.surface_tangent = self.tangent_finder.get_tangent()
         self.surface_index = None
         self.intersect_time = None
         self.por = None
@@ -157,7 +157,7 @@ class TangentFinder:
         self._find_all()
     
     
-    def get__tangent(self):
+    def get_tangent(self):
         return self.surface_tangent
     
     

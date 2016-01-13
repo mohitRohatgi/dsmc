@@ -57,7 +57,7 @@ def main():
     dt = 1.0e-5
 #    print dt
 #    cell_x, cell_y = np.ceil(length / dl), np.ceil(width / dl)
-    cell_x, cell_y = 20, 20
+    cell_x, cell_y = 10, 10
     cells = dm_c.RectCells(cell_x, cell_y, length, width, center, 2)
     
     start_time = time()
