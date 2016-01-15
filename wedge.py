@@ -10,6 +10,7 @@ import dsmc_particles as dm_p
 import dsmc_cells as dm_c
 import dsmc_solver as dm_sol
 from time import time
+import matplotlib.pyplot as plt
 
 """
 '_col_' denotes collision while '_f_' denotes free
@@ -70,15 +71,17 @@ def main():
     print "simulation time in mins (upper bound) = ", int(simulation_time / 60) + 1
     print "simulation time in sec = ", simulation_time
     number_density = solver.get_2d_num_den(cell_x, cell_y)
-    print "number_density = ", number_density
     temperature = solver.get_2d_temperature(cell_x, cell_y)
-    print "temperature = ", temperature
     
     num_den_msg = 'this file contains number density of each cell'
     temp_msg = 'this file contains temperature of each cell'
     
     dump_2D_output('wedge_super_temperature.txt', temperature,  temp_msg)
     dump_2D_output('wedge_super_number_density.txt', number_density, num_den_msg)
+    
+    plt.contourf(temperature)
+    plt.colorbar()
+    plt.show()
 
 
 

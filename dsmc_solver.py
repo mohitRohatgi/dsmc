@@ -96,9 +96,11 @@ class DsmcSolver:
     def _convert_to_2d(self, cell_x, cell_y, array):
         cell_x, cell_y = int(cell_x), int(cell_y)
         new_array = np.zeros((cell_x, cell_y), dtype=float)
+        index = cell_x * cell_y
         
         for i in range(cell_x):
-            for j in range(cell_x):
-                new_array[i][j] = array[j * cell_x + i]
+            index -= cell_x
+            for j in range(cell_y):
+                new_array[i][j] = array[index + j]
         
         return new_array
