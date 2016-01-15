@@ -5,6 +5,7 @@ Created on Wed Aug 19 22:49:35 2015
 @author: mohit
 """
 
+import numpy as np
 import dsmc_particles as dm_p
 import dsmc_cells as dm_c
 import dsmc_solver as dm_sol
@@ -73,22 +74,23 @@ def main():
     temperature = solver.get_2d_temperature(cell_x, cell_y)
     print "temperature = ", temperature
     
-    num_den_msg = 'this file contains number density( x1e18 ) of each cell'
+    num_den_msg = 'this file contains number density of each cell'
     temp_msg = 'this file contains temperature of each cell'
     
-    dump_output('wedge_super_temperature.txt', temperature,  temp_msg)
-    dump_output('wedge_super_number_density.txt', number_density / 1e18, num_den_msg)
+    dump_2D_output('wedge_super_temperature.txt', temperature,  temp_msg)
+    dump_2D_output('wedge_super_number_density.txt', number_density, num_den_msg)
 
 
 
-def dump_output(filename, data, data2=None, msg=None):
+# data is assumed to have a 2D shape.
+def dump_2D_output(filename, data, data2=None, msg=None):
     f = open(filename, 'w')
     if msg != None:
         print >> f, msg
     if data2 != None:
         print >> f, data2
-    print >> f, data
-    f.close
+    np.savetxt(f, data, fmt='%.4e')
+    f.close()
 
 
 

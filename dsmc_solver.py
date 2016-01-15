@@ -84,15 +84,14 @@ class DsmcSolver:
     # this function should return temperature in 2d numpy array
     def get_2d_temperature(self, cell_x, cell_y):
         for i in range(len(self.temperature)):
-            self.temperature[i] = round(self.temperature[i])
+            self.temperature[i] = round(self.temperature[i], 4)
         return self._convert_to_2d(cell_x, cell_y, self.temperature)
     
     
     # this function should return number density in 2d numpy array
     def get_2d_num_den(self, cell_x, cell_y):
         for i in range(len(self.number_density)):
-            self.number_density[i] = round(self.number_density[i] / 1.0e15)
-            self.number_density[i] *= 1.0e15
+            self.number_density[i] = round(self.number_density[i], 4)
         return self._convert_to_2d(cell_x, cell_y, self.number_density)
     
     
