@@ -15,13 +15,13 @@ import dsmc_boundary as dm_b
 
 
 class DsmcSolver:
-    def __init__(self, cells, gas, domain, n_particles_in_cell,
+    def __init__(self, cells, gas, domain, surf_group, n_particles_in_cell,
                  ref_point, dt, n_steps):
         
         self.n_steps = n_steps
         self.cells = cells
-        self.particles, self.cells_in = dm_i.Initialiser.run(cells, gas, domain,
-                                                n_particles_in_cell, ref_point)
+        self.particles, self.cells_in = dm_i.Initialiser.run(cells, gas, surf_group,
+                            domain.get_volume(), n_particles_in_cell, ref_point)
         
         self.distributor = dm_c.Distributor(cells, self.particles)
         
@@ -32,8 +32,7 @@ class DsmcSolver:
                                 gas.get_n_species(), self.particles, n_steps)
         
         self.flag = False
-        self.movement_manager = dm_r.MovementManager(self.particles,
-                                                     domain.get_surface())
+        self.movement_manager = dm_r.MovementManager(self.particles, surf_group)
         self.dt = dt
         self.temperature = np.zeros(len(cells.get_temperature()))
         self.number_density = np.zeros((gas.get_n_species(), 

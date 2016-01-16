@@ -6,15 +6,16 @@ Created on Sun Sep 13 23:12:08 2015
 """
 
 import dsmc_detector as dm_d
+import numpy as np
 
 
 
 class MovementManager:
-    def __init__(self, particles, surface, surface_temperature=None):
+    def __init__(self, particles, surf_group, surface_temperature=0):
         self.particles = particles
-        self.surface = surface
-        self.detector = dm_d.IntersectionDetector(surface)
-        self.reflector = Reflector(surface, particles, surface_temperature)
+        self.surf_group = surf_group
+        self.detector = dm_d.IntersectionDetector(surf_group)
+        self.reflector = Reflector(surf_group, particles)
     
     def move_all(self, model_key, dt):
         self._move_subset(0, self.particles.get_particles_count() - 1, dt, model_key)
@@ -38,11 +39,12 @@ class MovementManager:
         u = self.particles.get_velx(particle_index)
         v = self.particles.get_vely(particle_index)
         if self.detector.detect_point(point, u, v, dt):
-            refl_surface = self.detector.get_surface_index()
+            group_index = self.detector.get_surf_group_index()
+            surf_index = self.detector.get_surface_index()
             intersect_time = self.detector.get_intersect_time()
             por = self.detector.get_por()
-            self.reflector.reflect(particle_index, model_key, refl_surface,
-                                       por)
+            self.reflector.reflect(particle_index, model_key, group_index,
+                                   surf_index, por)
             self.particles.move(particle_index, dt * 0.01)
             remaining_time = dt * 0.99 - intersect_time
             if remaining_time < dt * 0.01:
@@ -56,48 +58,37 @@ class MovementManager:
 # por stands for the point of reflection of particle from the surface and is 
 # stored according to the index of the particle.
 class Reflector:
-    def __init__(self, surface, particles, surface_temperature):
-        self.surface = surface
+    def __init__(self, surf_group, particles):
+        self.surface = surf_group
         self.particles = particles
-        self.surface_temperature = surface_temperature
-        self.model = {'specular' : Specular(surface, particles), 
-                      1 : Specular(surface, particles), 
-                      'diffuse' : Diffuse(surface, particles,surface_temperature),
-                        2 : Diffuse(surface, particles, surface_temperature)}
+        self.model = {'specular' : Specular(surf_group, particles), 
+                      1 : Specular(surf_group, particles), 
+                      'diffuse' : Diffuse(surf_group, particles),
+                        2 : Diffuse(surf_group, particles)}
     
     
-    def reflect(self, particle_out, model_key, refl_surface, por):
-        self.model[model_key].run(particle_out, refl_surface, por)
+    def reflect(self, particle_out, model_key, group_index, surf_index, por):
+        self.model[model_key].run(particle_out, group_index, surf_index)
+        self._modify_location(particle_out, por)
     
     
-    def add_key(self, key, object_ref):
-        self.model[key] = object_ref
-    
-    
-    def show_key(self):
-        for key in self.model:
-            print key
+    def _modify_location(self, particle_out, por):        
+        self.particles.set_x(por[0], particle_out)
+        self.particles.set_y(por[1], particle_out)
 
 
 
 # this class only changes the velocity and puts the particle at the por.
 # from por movement class would take care of movement part.
 class Specular:
-    def __init__(self, surface, particles):
-        self.surface = surface
-        self.particles = particles
-        self.surface_tangent = dm_d.TangentFinder(surface).get_tangent()
-        self.refl_surface = 0
+    def __init__(self, surf_group, particles):
+        self.surf_group = surf_group
+        self.particles = particles    
     
-    
-    def run(self, particle_index, surface_index, por):
-        self._modify_vel(particle_index, surface_index)
-        self._modify_location(particle_index, por, surface_index)
-    
-    
-    def _modify_vel(self, particle_index, surface_index):
-        dx = self.surface_tangent[surface_index][0]
-        dy = self.surface_tangent[surface_index][1]
+    def run(self, particle_index, group_index, surf_index):
+        tangent = self.surf_group.get_surf_tangent(group_index, surf_index)
+        dx = tangent[0]
+        dy = tangent[1]
         v = self.particles.get_vely(particle_index) * dy * dy
         v -= self.particles.get_vely(particle_index) * dx * dx
         v += self.particles.get_velx(particle_index) * dx * dy * 2.0
@@ -108,45 +99,29 @@ class Specular:
         u /= (dx * dx + dy * dy)
         self.particles.set_velx(u, particle_index)
         self.particles.set_vely(v, particle_index)
-    
-    
-    def _modify_location(self, index, por, surface_index):        
-        self.particles.set_x(por[0], index)
-        self.particles.set_y(por[1], index)
 
 
 
 class Diffuse:
-    def __init__(self, surface, particles, surface_temperature):
-        self.surface = surface
+    def __init__(self, surf_group, particles):
+        self.surface = surf_group
         self.particles = particles
-        self.surface_temperature = surface_temperature
-        self.dt = 0.0
-        self.particles_out = []
-        self.intersect_time = []
-        self.refl_surface = []
-        self.por = []
     
     
-    def run(self, particles_out, dt, model_key, intersect_time, refl_surface,
-            por):
-        self.dt = dt
-        self.particles_out = particles_out
-        self.intersect_time = intersect_time
-        self.refl_surface = refl_surface
-        self.por = por
-        self._diffuse_subset(0, len(self.particles_out) - 1)
+    def run(self, particle_index, group_index, surface_index):
+        mpv = np.sqrt(1.0 / self.particles.get_mass(particle_index))
+        normal = self._find_normal(surface_index)
+        c1 = np.random.normal(0.0, 0.5) * mpv
+        c2 = np.random.normal(0.0, 0.5) * mpv
+        theta = np.random.random() * 2.0 * np.pi
+        self.particles.set_velz(c2 * np.sin(theta))
+        c2 *= np.cos(theta)
+        s = np.sqrt(normal[0] ** 2.0 + normal[1] ** 2.0)
+        u = c1 * self.surface_tangent[surface_index][0] + c2 * normal[0]
+        v = c1 * self.surface_tangent[surface_index][1] + c2 * normal[1]
+        self.particles.set_velx(u / s)
+        self.particles.set_vely(v / s)
     
     
-    def _diffuse_subset(self, start, end):
-        start, end = int(start), int(end)
-        if start == end:
-            self._specular(start)
-        else:
-            mid = int((start + end) / 2)
-            self._specular_subset(start, mid)
-            self._specular_subset(mid + 1, end)
-    
-    
-    def _diffuse(self, index):
+    def _find_normal(self, surface_index):
         pass

@@ -10,6 +10,7 @@ import dsmc_particles as dm_p
 import dsmc_cells as dm_c
 import dsmc_solver as dm_sol
 from time import time
+import dsmc_geometry as dm_g
 import matplotlib.pyplot as plt
 
 """
@@ -21,17 +22,17 @@ def main():
     inlet = [((0.0, 0.0), (0.0, 1.0))]
     outlet = [((1.0, 1.0), (1.0, 0.8))]
     zero_grad  = [((0.2, 0.0), (0.0, 0.0)), ((0.0, 1.0), (1.0, 1.0))]
-    surface = ((0.2, 0.0), (1.0, 0.8))
+    wedge = [((0.2, 0.0), (1.0, 0.8))]
+    ref_point = (1.0, 0.0)
 #    surface_temp = 300.0
     
     center = (0.5,0.5)
     length = 1.0
     width = 1.0
     volume = 0.68
-    domain = dm_p.Domain(inlet, zero_grad, outlet)
-    domain.set_surface(surface)
-#    domain.set_surface(surface, surface_temp)
-    domain.set_volume(volume)
+    domain = dm_g.Domain(volume, inlet, zero_grad, outlet)
+    surf_group = dm_g.SurfaceGroup()
+    surf_group.add_new_group(wedge, ref_point)
     
 #    ensemble_sample = 10
     time_av_sample = 10
@@ -63,7 +64,7 @@ def main():
     cells = dm_c.RectCells(cell_x, cell_y, length, width, center, 2)
     
     start_time = time()
-    solver = dm_sol.DsmcSolver(cells, gas, domain, n_particles_in_cell,
+    solver = dm_sol.DsmcSolver(cells, gas, domain, surf_group, n_particles_in_cell,
                                ref_point, dt, time_av_sample)
     solver.run(1, 1, 1)
     end_time = time()
