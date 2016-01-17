@@ -46,7 +46,6 @@ class CellDetector:
             xc, yc = self.cells.get_center(index)
             if not (self._check_groups(xc, yc, 0, group_count - 1)):
                 cells_in.append(index)
-        print cells_in
         return cells_in
     
     

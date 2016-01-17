@@ -24,7 +24,7 @@ def main():
     zero_grad  = [((0.2, 0.0), (0.0, 0.0)), ((0.0, 1.0), (1.0, 1.0))]
     wedge = [((0.2, 0.0), (1.0, 0.8))]
     ref_point = (1.0, 0.0)
-#    surface_temp = 300.0
+    surf_temp = 300.0
     
     center = (0.5,0.5)
     length = 1.0
@@ -32,10 +32,10 @@ def main():
     volume = 0.68
     domain = dm_g.Domain(volume, inlet, zero_grad, outlet)
     surf_group = dm_g.SurfaceGroup()
-    surf_group.add_new_group(wedge, ref_point)
+    surf_group.add_new_group(wedge, ref_point, surf_temp)
     
 #    ensemble_sample = 10
-    time_av_sample = 10
+    time_av_sample = 100
     dof = 3.0
     mass = 66.3e-27
     viscosity_coeff = 2.117
@@ -60,13 +60,16 @@ def main():
     dt = 1.0e-5
 #    print dt
 #    cell_x, cell_y = np.ceil(length / dl), np.ceil(width / dl)
-    cell_x, cell_y = 10, 10
+    cell_x, cell_y = 30, 30
     cells = dm_c.RectCells(cell_x, cell_y, length, width, center, 2)
+    detector_key = 1
+    collider_key = 1
+    reflection_key = 2
     
     start_time = time()
     solver = dm_sol.DsmcSolver(cells, gas, domain, surf_group, n_particles_in_cell,
                                ref_point, dt, time_av_sample)
-    solver.run(1, 1, 1)
+    solver.run(detector_key, collider_key, reflection_key)
     end_time = time()
     simulation_time = end_time - start_time
     print "simulation time in mins (upper bound) = ", int(simulation_time / 60) + 1

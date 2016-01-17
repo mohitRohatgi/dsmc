@@ -175,7 +175,6 @@ class CollisionDetector:
     # contains the cell_index in cell array.
     def _check(self, pair, cell_index, relative_speed):
         col_area = self._find_col_area(pair, cell_index, relative_speed)
-#        print col_area
         probability = col_area / self.ref_max_area[cell_index]
         threshold = np.random.rand()
         if (probability > threshold):

@@ -11,7 +11,7 @@ import numpy as np
 
 
 class MovementManager:
-    def __init__(self, particles, surf_group, surface_temperature=0):
+    def __init__(self, particles, surf_group):
         self.particles = particles
         self.surf_group = surf_group
         self.detector = dm_d.IntersectionDetector(surf_group)
@@ -61,10 +61,10 @@ class Reflector:
     def __init__(self, surf_group, particles):
         self.surface = surf_group
         self.particles = particles
-        self.model = {'specular' : Specular(surf_group, particles), 
-                      1 : Specular(surf_group, particles), 
-                      'diffuse' : Diffuse(surf_group, particles),
-                        2 : Diffuse(surf_group, particles)}
+        specular = Specular(surf_group, particles)
+        diffuse = Diffuse(surf_group, particles)
+        self.model = {'specular' : specular, 1 : specular, 
+                      'diffuse' : diffuse, 2 : diffuse}
     
     
     def reflect(self, particle_out, model_key, group_index, surf_index, por):
@@ -104,23 +104,26 @@ class Specular:
 
 class Diffuse:
     def __init__(self, surf_group, particles):
-        self.surface = surf_group
+        self.surf_group = surf_group
         self.particles = particles
+        self.k = 1.3806488e-23
     
     
-    def run(self, particle_index, group_index, surface_index):
-        mpv = np.sqrt(1.0 / self.particles.get_mass(particle_index))
-        normal = self._find_normal(surface_index)
+    def run(self, particle_index, group_index, surf_index):
+        T = self.surf_group.get_surf_temp(group_index, surf_index)
+        mpv = np.sqrt(2.0 * self.k * T / self.particles.get_mass(particle_index))
+        normal = self.surf_group.get_surf_normal(group_index, surf_index)
+        tangent = self.surf_group.get_surf_tangent(group_index, surf_index)
         c1 = np.random.normal(0.0, 0.5) * mpv
         c2 = np.random.normal(0.0, 0.5) * mpv
         theta = np.random.random() * 2.0 * np.pi
-        self.particles.set_velz(c2 * np.sin(theta))
+        self.particles.set_velz(c2 * np.sin(theta), particle_index)
         c2 *= np.cos(theta)
         s = np.sqrt(normal[0] ** 2.0 + normal[1] ** 2.0)
-        u = c1 * self.surface_tangent[surface_index][0] + c2 * normal[0]
-        v = c1 * self.surface_tangent[surface_index][1] + c2 * normal[1]
-        self.particles.set_velx(u / s)
-        self.particles.set_vely(v / s)
+        u = (c1 * tangent[0] + c2 * normal[0]) / s
+        v = (c1 * tangent[1] + c2 * normal[1]) / s
+        self.particles.set_velx(u, particle_index)
+        self.particles.set_vely(v, particle_index)
     
     
     def _find_normal(self, surface_index):

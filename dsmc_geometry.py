@@ -70,33 +70,26 @@ class SurfaceGroup:
         self.group = []
     
     
-    # surfaces are a list of surfaces constituting an object.
-    def add_new_group(self, surfaces, ref_point):
+    # surfaces are a list of surfaces having same temperature constituting an 
+    # object or a part of an object.
+    def add_new_group(self, surfaces, ref_point, surf_temp=None):
         surf = Surface()
         for surface in surfaces:
-            surf.add_surface(surface, ref_point)
+            surf.add_surface(surface, ref_point, surf_temp)
         self.group.append(surf)
     
     
-    def add_surf(self, group_index, surface):
+    def add_surf(self, group_index, surface, surf_temp=None):
         surf_group = self.get_surf_group(group_index)
-        surf_group.add_surface(surface)
-    
-    
-    # This method adds surface temperatures to a group of surfaces.
-    # surf_temps is a list of surface temperatures.
-    def add_group_temps(self, group_index, surf_temps):
-        surface = self.get_surf_group(group_index)
-        for index in range(len(surf_temps)):
-            surface.add_surf_temp(index, surf_temps[index])
-    
-    
-    def add_surf_temp(self, group_index, surf_index, surf_temp):
-        self.get_surf_group(group_index).add_surf_temp(surf_index, surf_temp)
+        surf_group.add_surface(surface, surf_temp)
     
     
     def get_group_count(self):
         return len(self.group)
+    
+    
+    def get_surface(self, group_index, surf_index):
+        return self.get_surf_group(group_index).get_surface(surf_index)
     
     
     def get_surf_count(self, group_index):
@@ -107,10 +100,6 @@ class SurfaceGroup:
         return self.group[group_index]
     
     
-    def get_surface(self, group_index, surf_index):
-        return self.get_surf_group(group_index).get_surface(surf_index)
-    
-    
     def get_surf_vertex1(self, group_index, surf_index):
         return self.get_surf_group(group_index).get_surf_vertex1(surf_index)
     
@@ -119,8 +108,8 @@ class SurfaceGroup:
         return self.get_surf_group(group_index).get_surf_vertex2(surf_index)
     
     
-    def get_surface_temp(self, group_index, surf_index):
-        return self.get_surf_group(group_index).get_surface_temp(surf_index)
+    def get_surf_temp(self, group_index, surf_index):
+        return self.get_surf_group(group_index).get_surf_temp(surf_index)
     
     
     def get_surf_normal(self, group_index, surf_index):
@@ -136,19 +125,16 @@ class SurfaceGroup:
 class Surface:
     def __init__(self):
         self.surfaces = []
-        self.surf_temp = {}
+        self.surf_temp = None
         self.surf_tangent = {}
         self.surf_normal = {}
     
     
-    def add_surface(self, surface, ref_point):
+    def add_surface(self, surface, ref_point, surf_temp=None):
         self.surfaces.append(surface)
         self._set_surf_tangent()
         self._set_surf_normal(ref_point)
-    
-    
-    def add_surf_temp(self, surf_temp, surf_index):
-        self.surf_temp[self.get_surface(surf_index)] = surf_temp
+        self.surf_temp = surf_temp
     
     
     def get_surf_count(self):
@@ -167,8 +153,8 @@ class Surface:
         return self.surfaces[index]
     
     
-    def get_surface_temp(self, index):
-        return self.surf_temp[self.get_surface(index)]
+    def get_surf_temp(self, surf_index):
+        return self.surf_temp
     
     
     def get_surf_normal(self, index):
