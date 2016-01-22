@@ -5,6 +5,7 @@ Created on Sat Jan 16 23:23:36 2016
 @author: mohit
 """
 
+from numpy import sqrt
 
 # assuming domain is rectangular and surface is a polygon.
 # inlet, outlet and surface need to be wrapped in a list even if they are just 
@@ -73,9 +74,9 @@ class SurfaceGroup:
     # surfaces are a list of surfaces having same temperature constituting an 
     # object or a part of an object.
     def add_new_group(self, surfaces, ref_point, surf_temp=None):
-        surf = Surface()
+        surf = Surface(ref_point)
         for surface in surfaces:
-            surf.add_surface(surface, ref_point, surf_temp)
+            surf.add_surface(surface, surf_temp)
         self.group.append(surf)
     
     
@@ -123,17 +124,18 @@ class SurfaceGroup:
 
 # This class of objects would have information about the surfaces
 class Surface:
-    def __init__(self):
+    def __init__(self, ref_point):
         self.surfaces = []
         self.surf_temp = None
         self.surf_tangent = {}
         self.surf_normal = {}
+        self.ref_point = ref_point
     
     
-    def add_surface(self, surface, ref_point, surf_temp=None):
+    def add_surface(self, surface, surf_temp=None):
         self.surfaces.append(surface)
         self._set_surf_tangent()
-        self._set_surf_normal(ref_point)
+        self._set_surf_normal()
         self.surf_temp = surf_temp
     
     
@@ -170,15 +172,32 @@ class Surface:
         vertex1 = self.get_surf_vertex1(index)
         vertex2 = self.get_surf_vertex2(index)
         tangent = (vertex2[0] - vertex1[0], vertex2[1] - vertex1[1])
+        s = sqrt(tangent[0] ** 2.0 + tangent[1] ** 2.0)
+        tangent = (tangent[0] / s, tangent[1] / s)
         self.surf_tangent[index] = tangent
     
     
-    def _set_surf_normal(self, ref_point):
+    def _set_surf_normal(self):
         index = self.get_surf_count() - 1
         tangent = self.get_surf_tangent(index)
-        vertex = self.get_surf_vertex1(-1)
-        dx = ref_point[0] - vertex[0]
-        dy = ref_point[1] - vertex[1]
+        vertex = self.get_surf_vertex1(index)
+#         vertical line case
+        if tangent[0] == 0.0:
+            if vertex[0] > self.ref_point[0]:
+                self.surf_normal[index] =  (1.0, 0.0)
+            else:
+                self.surf_normal[index] =  (-1.0, 0.0)
+            return
+        # horizontal line case
+        if tangent[1] == 0.0:
+            if vertex[1] > self.ref_point[1]:
+                self.surf_normal[index] = (0.0, 1.0)
+            else:
+                self.surf_normal[index] = (0.0, -1.0)
+            return
+        
+        dx = self.ref_point[0] - vertex[0]
+        dy = self.ref_point[1] - vertex[1]
         if dx * tangent[1] - dy * tangent[0] > 0:
             self.surf_normal[index] =  (-tangent[1], tangent[0])
         else:

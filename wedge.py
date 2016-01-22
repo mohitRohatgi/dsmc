@@ -19,31 +19,35 @@ import matplotlib.pyplot as plt
 
 
 def main():
-    inlet = [((0.0, 0.0), (0.0, 1.0))]
-    outlet = [((1.0, 1.0), (1.0, 0.8))]
-    zero_grad  = [((0.2, 0.0), (0.0, 0.0)), ((0.0, 1.0), (1.0, 1.0))]
-    wedge = [((0.2, 0.0), (1.0, 0.8))]
-    ref_point = (1.0, 0.0)
-    surf_temp = 300.0
     
-    center = (0.5,0.5)
+    wedge = [((0.39, 0.0), (1.0, 0.3464))]
+    ref_point = (1.0, 0.0)
+    surf_temp = 1000.0
+    # creating surface
+    surf_group = dm_g.SurfaceGroup()
+    surf_group.add_new_group(wedge, ref_point, surf_temp)
+    
+    inlet = [((0.0, 0.0), (0.0, 1.0))]
+    outlet = [((1.0, 1.0), (1.0, 0.3464))]
+    zero_grad  = [((0.0, 0.0), (0.39, 0.0)), ((0.39, 0.0), (1.0, 0.3464)), 
+                  ((0.0, 1.0), (1.0, 1.0))]
+    center = (0.5, 0.5)
     length = 1.0
     width = 1.0
     volume = 0.68
     domain = dm_g.Domain(volume, inlet, zero_grad, outlet)
-    surf_group = dm_g.SurfaceGroup()
-    surf_group.add_new_group(wedge, ref_point, surf_temp)
+    
     
 #    ensemble_sample = 10
-    time_av_sample = 100
+    time_av_sample = 1000
     dof = 3.0
     mass = 66.3e-27
     viscosity_coeff = 2.117
     viscosity_index = 0.81
     mole_fraction = [0.5, 0.5]
     dia = 4.17e-10
-    mach = [2.5, 0.0, 0.0]
-    temperature = 500.0
+    mach = [5.0, 0.0, 0.0]
+    temperature = 300.0
     ref_temperature = 273.0
     number_density = 1.699e19
     gamma = 5.0 / 3.0
@@ -60,7 +64,7 @@ def main():
     dt = 1.0e-5
 #    print dt
 #    cell_x, cell_y = np.ceil(length / dl), np.ceil(width / dl)
-    cell_x, cell_y = 30, 30
+    cell_x, cell_y = 10, 10
     cells = dm_c.RectCells(cell_x, cell_y, length, width, center, 2)
     detector_key = 1
     collider_key = 1

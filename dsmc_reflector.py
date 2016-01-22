@@ -92,11 +92,9 @@ class Specular:
         v = self.particles.get_vely(particle_index) * dy * dy
         v -= self.particles.get_vely(particle_index) * dx * dx
         v += self.particles.get_velx(particle_index) * dx * dy * 2.0
-        v /= (dx * dx + dy * dy)
         u = self.particles.get_velx(particle_index) * dx * dx
         u -= self.particles.get_velx(particle_index) * dy * dy
         u += self.particles.get_vely(particle_index) * dx * dy * 2.0
-        u /= (dx * dx + dy * dy)
         self.particles.set_velx(u, particle_index)
         self.particles.set_vely(v, particle_index)
 
@@ -119,12 +117,7 @@ class Diffuse:
         theta = np.random.random() * 2.0 * np.pi
         self.particles.set_velz(c2 * np.sin(theta), particle_index)
         c2 *= np.cos(theta)
-        s = np.sqrt(normal[0] ** 2.0 + normal[1] ** 2.0)
-        u = (c1 * tangent[0] + c2 * normal[0]) / s
-        v = (c1 * tangent[1] + c2 * normal[1]) / s
+        u = (c1 * tangent[0] + c2 * normal[0])
+        v = (c1 * tangent[1] + c2 * normal[1])
         self.particles.set_velx(u, particle_index)
         self.particles.set_vely(v, particle_index)
-    
-    
-    def _find_normal(self, surface_index):
-        pass

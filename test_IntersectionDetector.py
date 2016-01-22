@@ -8,11 +8,14 @@ Created on Wed Sep 30 06:37:21 2015
 import numpy as np
 import unittest
 import dsmc_detector as dm_d
+import dsmc_geometry as dm_g
 
 
 class TestIntersectionDetector(unittest.TestCase):
     def test_horizontal_line_quad_1(self):
-        surface= [(1.0, 1.0), (6.0, 1.0)]
+        surf = [((1.0, 1.0), (6.0, 1.0))]
+        surface = dm_g.SurfaceGroup()
+        surface.add_new_group(surf, (3.0, 0.5))
         x = np.linspace(1.0, 6.0, 100)
         y = np.ones(100, dtype=float) * 3.0
         detector = dm_d.IntersectionDetector(surface)
@@ -31,7 +34,9 @@ class TestIntersectionDetector(unittest.TestCase):
             
     
     def test_horizontal_line_quad_2(self):        
-        surface = [(-1.0, 1.0), (-6.0, 1.0)]
+        surf = [(-1.0, 1.0), (-6.0, 1.0)]
+        surface = dm_g.SurfaceGroup()
+        surface.add_new_group(surf, (-3.0, 0.5))
         x = np.linspace(-1.0, -6.0, 100)
         y = np.ones(100, dtype=float) * 3.0
         detector = dm_d.IntersectionDetector(surface)
@@ -49,7 +54,9 @@ class TestIntersectionDetector(unittest.TestCase):
                 self.assertEqual(surface_index, 0)
     
     def test_horizontal_line_quad_3(self):
-        surface = [(-1.0, -1.0), (-6.0, -1.0)]
+        surf = [(-1.0, -1.0), (-6.0, -1.0)]
+        surface = dm_g.SurfaceGroup()
+        surface.add_new_group(surf, (-3.0, -0.5))
         x = np.linspace(-1.0, -6.0, 100)
         y = np.ones(100, dtype=float) * -3.0
         detector = dm_d.IntersectionDetector(surface)
@@ -67,7 +74,9 @@ class TestIntersectionDetector(unittest.TestCase):
                 self.assertEqual(surface_index, 0)
     
     def test_horizontal_line_quad_4(self):
-        surface = [(1.0, -1.0), (6.0, -1.0)]
+        surf = [(1.0, -1.0), (6.0, -1.0)]
+        surface = dm_g.SurfaceGroup()
+        surface.add_new_group(surf, (3.0, -0.5))
         x = np.linspace(1.0, 6.0, 100)
         y = np.ones(100, dtype=float) * -3.0
         detector = dm_d.IntersectionDetector(surface)
@@ -86,7 +95,9 @@ class TestIntersectionDetector(unittest.TestCase):
     
     
     def test_vertical_line_quad1(self):
-        surface = [(1.0, 1.0), (1.0, 6.0)]
+        surf = [(1.0, 1.0), (1.0, 6.0)]
+        surface = dm_g.SurfaceGroup()
+        surface.add_new_group(surf, (-1.0, 3.0))
         y = np.linspace(1.0, 6.0, 100)
         x = np.ones(100, dtype=float) * 3.0
         detector = dm_d.IntersectionDetector(surface)
@@ -107,7 +118,9 @@ class TestIntersectionDetector(unittest.TestCase):
     def test_wedge_surface(self):
         point = (0.88018521325675159, 0.68087403676204228)
         vel = (92.480485409376826, 23.598134880295735)
-        surface = [(0.2, 0.0), (1.0, 0.8)]
+        surf = [(0.2, 0.0), (1.0, 0.8)]
+        surface = dm_g.SurfaceGroup()
+        surface.add_new_group(surf, (1.0, 0.0))
         detector = dm_d.IntersectionDetector(surface)
         self.assertTrue(detector.detect_point(point, vel[0], vel[1], 1.0e-5))
     
@@ -115,7 +128,10 @@ class TestIntersectionDetector(unittest.TestCase):
     def test_box(self):
         point = (0.0, 0.26082442984289667)
         vel = (-356.44993069494706, -110.17505903656894)
-        surface = [(0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0), (0.0, 0.0)]
+        surf = [((0.0, 1.0), (0.0, 0.0)), ((0.0, 0.0), (1.0, 0.0)),
+            ((1.0, 0.0), (1.0, 1.0)), ((1.0, 1.0), (0.0, 1.0))]
+        surface = dm_g.SurfaceGroup()
+        surface.add_new_group(surface, (0.5,0.5))
         detector = dm_d.IntersectionDetector(surface)
         self.assertTrue(detector.detect_point(point, vel[0], vel[1], 1.0e-5))
 

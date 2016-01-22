@@ -1,22 +1,17 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sat Jan  9 18:46:14 2016
-
-@author: mohit
-"""
-
-# -*- coding: utf-8 -*-
-"""
 Created on Wed Aug 19 22:49:35 2015
 
 @author: mohit
 """
 
+import numpy as np
 import dsmc_particles as dm_p
 import dsmc_cells as dm_c
 import dsmc_solver as dm_sol
-import dsmc_geometry as dm_g
 from time import time
+import dsmc_geometry as dm_g
+import matplotlib.pyplot as plt
 
 """
 '_col_' denotes collision while '_f_' denotes free
@@ -24,29 +19,39 @@ from time import time
 
 
 def main():
-
-    surface = [((0.0, 1.0), (0.0, 0.0)), ((0.0, 0.0), (1.0, 0.0)),
-            ((1.0, 0.0), (1.0, 1.0)), ((1.0, 1.0), (0.0, 1.0))]
     
+    plate1 = [((0.0, 0.0), (1.0, 0.0))]
+    ref_point = (0.5, -0.5)
+    surf_temp1 = 1000.0
+    
+    plate2 = [((0.0, 1.0), (1.0, 1.0))]
+    ref_point2 = (0.5, 1.5)
+    surf_temp2 = 1000.0
+    # creating surface
+    surf_group = dm_g.SurfaceGroup()
+    surf_group.add_new_group(plate1, ref_point, surf_temp1)
+    surf_group.add_new_group(plate2, ref_point2, surf_temp2)
+    
+    inlet = [((0.0, 0.0), (0.0, 1.0))]
+    outlet = [((1.0, 0.0), (1.0, 1.0))]
+    zero_grad  = [((0.0, 0.0), (1.0, 0.0)), ((0.0, 1.0), (1.0, 1.0))]
     center = (0.5,0.5)
     length = 1.0
     width = 1.0
     volume = 1.0
+    domain = dm_g.Domain(volume, inlet, zero_grad, outlet)
     
-    domain = dm_g.Domain(volume)
-    surf_group = dm_g.SurfaceGroup()
-    surf_group.add_new_group(surface, center)
     
 #    ensemble_sample = 10
-    sample_size = 10
+    time_av_sample = 1000
     dof = 3.0
     mass = 66.3e-27
     viscosity_coeff = 2.117
     viscosity_index = 0.81
     mole_fraction = [0.5, 0.5]
     dia = 4.17e-10
-    mach = [0.0, 0.0, 0.0]
-    temperature = 500.0
+    mach = [5.0, 0.0, 0.0]
+    temperature = 300.0
     ref_temperature = 273.0
     number_density = 1.699e19
     gamma = 5.0 / 3.0
@@ -65,36 +70,42 @@ def main():
 #    cell_x, cell_y = np.ceil(length / dl), np.ceil(width / dl)
     cell_x, cell_y = 10, 10
     cells = dm_c.RectCells(cell_x, cell_y, length, width, center, 2)
+    detector_key = 1
+    collider_key = 1
+    reflection_key = 2
     
     start_time = time()
-    solver = dm_sol.DsmcSolver(cells, gas, domain, surf_group,
-                               n_particles_in_cell, ref_point, dt, sample_size)
-    solver.run(1, 1, 1)
+    solver = dm_sol.DsmcSolver(cells, gas, domain, surf_group, n_particles_in_cell,
+                               ref_point, dt, time_av_sample)
+    solver.run(detector_key, collider_key, reflection_key)
     end_time = time()
     simulation_time = end_time - start_time
     print "simulation time in mins (upper bound) = ", int(simulation_time / 60) + 1
     print "simulation time in sec = ", simulation_time
-    number_density = solver.get_2d_num_den(10, 10)
-    print "number_density = ", number_density
-    temperature = solver.get_2d_temperature(10, 10)
-    print "temperature = ", temperature
+    number_density = solver.get_2d_num_den(cell_x, cell_y)
+    temperature = solver.get_2d_temperature(cell_x, cell_y)
     
-    num_den_msg = 'this file contains number density( x1e19 ) of each cell'
+    num_den_msg = 'this file contains number density of each cell'
     temp_msg = 'this file contains temperature of each cell'
     
-    dump_output('box_temperature.txt', temperature,  temp_msg)
-    dump_output('box_number_density.txt', number_density / 1e19, num_den_msg)
+    dump_2D_output('wedge_super_temperature.txt', temperature,  temp_msg)
+    dump_2D_output('wedge_super_number_density.txt', number_density, num_den_msg)
+    
+    plt.contourf(temperature)
+    plt.colorbar()
+    plt.show()
 
 
 
-def dump_output(filename, data, data2=None, msg=None):
+# data is assumed to have a 2D shape.
+def dump_2D_output(filename, data, data2=None, msg=None):
     f = open(filename, 'w')
     if msg != None:
         print >> f, msg
     if data2 != None:
         print >> f, data2
-    print >> f, data
-    f.close
+    np.savetxt(f, data, fmt='%.4e')
+    f.close()
 
 
 

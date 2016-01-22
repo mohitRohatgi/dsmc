@@ -6,7 +6,6 @@ Created on Sun Sep 13 23:16:38 2015
 """
 import numpy as np
 import dsmc_particles as dm_p
-import dsmc_detector as dm_d
 import dsmc_cells as dm_c
 import dsmc_sampler as dm_s
 
@@ -28,7 +27,6 @@ class Initialiser:
         sampler = dm_s.Instant_sampler(cells, cells_in, particles, 
                                        gas.get_n_species())
         sampler.run()
-#        print cells.temperature
         return [particles, cells_in]
 
 
@@ -80,11 +78,11 @@ class CellDetector:
     def _check_cell(self, xc, yc, group_index, surf_index):
         normal = self.surf_group.get_surf_normal(group_index, surf_index)
         vertex1 = self.surf_group.get_surf_vertex1(group_index, surf_index)
-        dot_prod = normal[0] * (xc- vertex1[0]) + normal[1] * (yc - vertex1[1])
-        if dot_prod < 0:
-            return True
-        else:
+        dot_prod = normal[0] * (xc - vertex1[0]) + normal[1] * (yc - vertex1[1])
+        if dot_prod > 0:
             return False
+        else:
+            return True
 
 
 
