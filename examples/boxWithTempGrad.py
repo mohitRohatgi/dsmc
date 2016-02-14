@@ -84,27 +84,13 @@ def main():
     temperature = solver.get_2d_temperature(10, 10)
     print "temperature = ", temperature
     
-    num_den_msg = 'this file contains number density( x1e19 ) of each cell'
-    temp_msg = 'this file contains temperature of each cell'
+    f = open('box_temp_grad_temperature.txt', 'w')
+    np.savetxt(f, temperature)
+    f.close()
     
-    dump_output('box_temperature.txt', temperature,  temp_msg)
-    dump_output('box_number_density.txt', number_density / 1e19, num_den_msg)
-    
-    plt.contourf(temperature)
-    plt.colorbar()
-    plt.show()
-
-
-
-def dump_output(filename, data, data2=None, msg=None):
-    f = open(filename, 'w')
-    if msg != None:
-        print >> f, msg
-    if data2 != None:
-        print >> f, data2
-    print >> f, data
-    f.close
-
+    f = open('box_temp_grad_number_density.txt', 'w')
+    np.savetxt(f, number_density)
+    f.close()
 
 
 if __name__ == '__main__':

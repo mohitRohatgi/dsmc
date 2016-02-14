@@ -119,6 +119,10 @@ class SurfaceGroup:
     
     def get_surf_tangent(self, group_index, surf_index):
         return self.get_surf_group(group_index).get_surf_tangent(surf_index)
+    
+    
+    def get_surf_length(self, group_index, surf_index):
+        return self.get_surf_group(group_index).get_surf_length(surf_index)
 
 
 
@@ -127,6 +131,7 @@ class Surface:
     def __init__(self, ref_point):
         self.surfaces = []
         self.surf_temp = None
+        self.surf_length = {}
         self.surf_tangent = {}
         self.surf_normal = {}
         self.ref_point = ref_point
@@ -167,6 +172,10 @@ class Surface:
         return self.surf_tangent[index]
     
     
+    def get_surf_length(self, index):
+        return self.surf_length[index]
+    
+    
     def _set_surf_tangent(self):
         index = self.get_surf_count() - 1
         vertex1 = self.get_surf_vertex1(index)
@@ -175,6 +184,7 @@ class Surface:
         s = sqrt(tangent[0] ** 2.0 + tangent[1] ** 2.0)
         tangent = (tangent[0] / s, tangent[1] / s)
         self.surf_tangent[index] = tangent
+        self.surf_length[index] = s
     
     
     def _set_surf_normal(self):

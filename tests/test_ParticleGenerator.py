@@ -8,7 +8,7 @@ Created on Sat Jan  9 02:02:44 2016
 import unittest
 import dsmc_boundary as dm_b
 from dsmc_cells import RectCells
-from dsmc_particles import Domain
+from dsmc_geometry import Domain
 import dsmc_particles as dm_p
 
 class test_ParticleGenerator(unittest.TestCase):
@@ -16,7 +16,8 @@ class test_ParticleGenerator(unittest.TestCase):
         inlet = [((-2.0, -1.0), (-2.0, 1.0))]
         zero_grad = [((-2.0, -1.0), (0.0, -1.0)), ((-2.0, 1.0), (2.0, 1.0))]
         outlet = []
-        domain = Domain(inlet, zero_grad, outlet)
+        volume = 8.0
+        domain = Domain(volume, inlet, zero_grad, outlet)
         cells = RectCells(10, 10, 4.0, 2.0, (0.0, 0.0), 1)
         for i in range(100):
             p = []

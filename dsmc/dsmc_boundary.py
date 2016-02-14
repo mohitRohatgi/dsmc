@@ -340,7 +340,7 @@ class Boundary:
     
     
     # this method returns the cell index of the cell inside the domain adjacent
-    # to the cell being refered by the cell_ref(reference variable of cell 
+    # to the cell being referred by the cell_ref(reference variable of cell 
     # object) and  cell index.
     def get_adj_cell_index(self, cell_ref, cell_index):
         Map = self.adj_map[cell_ref]

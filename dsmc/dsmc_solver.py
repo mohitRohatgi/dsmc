@@ -47,6 +47,7 @@ class DsmcSolver:
     def run(self, detector_key, collider_key, reflection_key):
         
         for i in range(self.n_steps):
+            print "time_sample = ", i, " ",
             self.movement_manager.move_all(reflection_key, self.dt)
             self.distributor.distribute_all_particles()
             self.collision_manager.run(collider_key, detector_key)

@@ -110,7 +110,8 @@ class IntersectionDetector:
     def _check_surf(self, point, u, v, group_index, surf_index):
         vertex1 = self.surf_group.get_surf_vertex1(group_index, surf_index)
         tangent = self.surf_group.get_surf_tangent(group_index, surf_index)
-        por = self._find_por(point, u, v, vertex1, tangent)
+        length = self.surf_group.get_surf_length(group_index, surf_index)
+        por = self._find_por(point, u, v, vertex1, tangent, length)
         # checking for parallelism and finite line segment case.
         if por == None:
             return False
@@ -134,13 +135,14 @@ class IntersectionDetector:
     # account for floating point no.
     def _nearby(self, point, group_index, surf_index):
         tangent = self.surf_group.get_surf_tangent(group_index, surf_index)
+        length = self.surf_group.get_surf_length(group_index, surf_index)
         vertex1 = self.surf_group.get_surf_vertex1(group_index, surf_index)
-        t = self._find_t(point, vertex1, tangent)
-        dx = vertex1[0] - point[0] + t * tangent[0]
-        dy = vertex1[1] - point[1] + t * tangent[1]
+        t = self._find_t(point, vertex1, tangent, length)
+        dx = vertex1[0] - point[0] + t * tangent[0] * length
+        dy = vertex1[1] - point[1] + t * tangent[1] * length
         ds = dx * dx + dy * dy
         if (ds <= self.FUZZ_SQ):
-            por = (vertex1[0] + t * tangent[0], vertex1[1] + t * tangent[1])
+            por = (dx + point[0], dy + point[1])
             return self._set_data(por, self.FUZZ * 1.0e-3,
                                   group_index, surf_index)
         else:
@@ -151,18 +153,18 @@ class IntersectionDetector:
     # it finds the parameter to define the point which is perpendicular to particle
     # and lies on the surface. Using this parameter length of perpendicular is
     # found.
-    def _find_t(self, point, vertex1, tangent):
+    def _find_t(self, point, vertex1, tangent, surf_length):
         t = (point[0] - vertex1[0]) * tangent[0]
         t += (point[1] - vertex1[1]) * tangent[1]
-        t /= tangent[0] ** 2.0 + tangent[1] ** 2.0
+        t /= (tangent[0] ** 2.0 + tangent[1] ** 2.0) * surf_length
         
         return t
     
     
     # por = None means that the particle would not intersect.
     # finite line segment case has also been considered here.
-    def _find_por(self, point, u, v, vertex1, tangent):
-        constt = tangent[1] * u - v * tangent[0]
+    def _find_por(self, point, u, v, vertex1, tangent, surf_length):
+        constt = (tangent[1] * u - v * tangent[0]) * surf_length
         # parallelism case
         if constt == 0.0:
             return None
@@ -173,8 +175,8 @@ class IntersectionDetector:
             # finite line segment case.
             if (t < -self.FUZZ or t > (1 + self.FUZZ)):
                 return None
-            x = vertex1[0] + t * tangent[0]
-            y = vertex1[1] + t * tangent[1]
+            x = vertex1[0] + t * tangent[0] * surf_length
+            y = vertex1[1] + t * tangent[1] * surf_length
             return (x, y)
     
     

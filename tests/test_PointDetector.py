@@ -6,9 +6,7 @@ Created on Thu Sep 24 22:21:37 2015
 """
 
 import unittest
-from dsmc_detector import PointDetector
-import math as m
-import numpy as np
+from dsmc_unused import PointDetector
 
 class TestPointDetector(unittest.TestCase):
     

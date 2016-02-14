@@ -86,28 +86,13 @@ def main():
     number_density = solver.get_2d_num_den(cell_x, cell_y)
     temperature = solver.get_2d_temperature(cell_x, cell_y)
     
-    num_den_msg = 'this file contains number density of each cell'
-    temp_msg = 'this file contains temperature of each cell'
-    
-    dump_2D_output('wedge_super_temperature.txt', temperature,  temp_msg)
-    dump_2D_output('wedge_super_number_density.txt', number_density, num_den_msg)
-    
-    plt.contourf(temperature)
-    plt.colorbar()
-    plt.show()
-
-
-
-# data is assumed to have a 2D shape.
-def dump_2D_output(filename, data, data2=None, msg=None):
-    f = open(filename, 'w')
-    if msg != None:
-        print >> f, msg
-    if data2 != None:
-        print >> f, data2
-    np.savetxt(f, data, fmt='%.4e')
+    f = open('nozzle_temperature.txt', 'w')
+    np.savetxt(f, temperature)
     f.close()
-
+    
+    f = open('nozzle_number_density.txt', 'w')
+    np.savetxt(f, number_density)
+    f.close()
 
 
 if __name__ == '__main__':
