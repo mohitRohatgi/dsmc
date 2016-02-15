@@ -12,10 +12,10 @@ Created on Wed Aug 19 22:49:35 2015
 @author: mohit
 """
 
-import dsmc_particles as dm_p
-import dsmc_cells as dm_c
-import dsmc_solver as dm_sol
-import dsmc_geometry as dm_g
+import particles as dm_p
+import cells as dm_c
+import solver as dm_sol
+import geometry as dm_g
 from time import time
 
 """

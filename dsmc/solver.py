@@ -6,12 +6,12 @@ Created on Mon Sep 14 04:19:43 2015
 """
 
 import numpy as np
-import dsmc_cells as dm_c
-import dsmc_collision as dm_col
-import dsmc_initialiser as dm_i
-import dsmc_reflector as dm_r
-import dsmc_sampler as dm_s
-import dsmc_boundary as dm_b
+import cells as dm_c
+import collision as dm_col
+import initialiser as dm_i
+import movement as dm_m
+import sampler as dm_s
+import boundary as dm_b
 
 
 class DsmcSolver:
@@ -32,7 +32,7 @@ class DsmcSolver:
                                 gas.get_n_species(), self.particles, n_steps)
         
         self.flag = False
-        self.movement_manager = dm_r.MovementManager(self.particles, surf_group)
+        self.movement_manager = dm_m.MovementManager(self.particles, surf_group)
         self.dt = dt
         self.temperature = np.zeros(len(cells.get_temperature()))
         self.number_density = np.zeros((gas.get_n_species(), 

@@ -6,7 +6,7 @@ Created on Thu Sep 24 22:21:37 2015
 """
 
 import unittest
-from dsmc_unused import PointDetector
+from unused import PointDetector
 
 class TestPointDetector(unittest.TestCase):
     

@@ -6,11 +6,11 @@ Created on Wed Aug 19 22:49:35 2015
 """
 
 import numpy as np
-import dsmc_particles as dm_p
-import dsmc_cells as dm_c
-import dsmc_solver as dm_sol
+import particles as dm_p
+import cells as dm_c
+import solver as dm_sol
 from time import time
-import dsmc_geometry as dm_g
+import geometry as dm_g
 
 """
 '_col_' denotes collision while '_f_' denotes free

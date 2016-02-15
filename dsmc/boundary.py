@@ -1,5 +1,5 @@
 import numpy as np
-import dsmc_particles as dm_p
+import particles as dm_p
 
 
 # this is the top level manager which woud be responsible for the boundary 

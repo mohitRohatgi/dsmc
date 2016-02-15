@@ -7,7 +7,7 @@ Created on Fri Jan 22 10:24:47 2016
 
 
 import unittest
-from dsmc_geometry import SurfaceGroup
+from geometry import SurfaceGroup
 
 
 class test_SurfaceGroup(unittest.TestCase):

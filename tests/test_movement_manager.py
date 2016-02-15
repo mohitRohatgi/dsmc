@@ -7,9 +7,9 @@ Created on Mon Oct 19 21:46:14 2015
 
 import unittest
 import numpy as np
-import dsmc_particles as dm_p
-import dsmc_reflector as dm_r
-import dsmc_geometry as dm_g
+import particles as dm_p
+import reflector as dm_r
+import geometry as dm_g
 
 
 class TestMovementManager(unittest.TestCase):

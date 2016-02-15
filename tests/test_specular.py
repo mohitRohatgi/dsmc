@@ -7,9 +7,9 @@ Created on Sun Oct 18 17:24:05 2015
 
 import unittest
 import numpy as np
-import dsmc_particles as dm_p
-import dsmc_reflector as dm_r
-from dsmc_geometry import SurfaceGroup
+import particles as dm_p
+import reflector as dm_r
+from geometry import SurfaceGroup
 
 class TestReflector(unittest.TestCase):
     def test_horizontal_line(self):

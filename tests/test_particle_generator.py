@@ -6,10 +6,10 @@ Created on Sat Jan  9 02:02:44 2016
 """
 
 import unittest
-import dsmc_boundary as dm_b
-from dsmc_cells import RectCells
-from dsmc_geometry import Domain
-import dsmc_particles as dm_p
+import boundary as dm_b
+from cells import RectCells
+from geometry import Domain
+import particles as dm_p
 
 class test_ParticleGenerator(unittest.TestCase):
     def test_box(self):

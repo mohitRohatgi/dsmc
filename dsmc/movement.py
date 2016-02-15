@@ -5,7 +5,7 @@ Created on Sun Sep 13 23:12:08 2015
 @author: mohit
 """
 
-import dsmc_detector as dm_d
+import detector as dm_d
 import numpy as np
 
 

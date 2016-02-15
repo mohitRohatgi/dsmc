@@ -5,10 +5,9 @@ Created on Sun Sep 13 23:16:38 2015
 @author: mohit
 """
 import numpy as np
-import dsmc_particles as dm_p
-import dsmc_cells as dm_c
-import dsmc_sampler as dm_s
-
+import particles as dm_p
+import cells as dm_c
+import sampler as dm_s
 
 
 class Initialiser:
