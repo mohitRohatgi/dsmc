@@ -10,7 +10,7 @@ import numpy as np
 
 # p_time is the present time of the simulation while time0 is the initial
 # f_time is the final time.
-class Sampling_manager:
+class SamplingManager:
     def __init__(self, cells, cells_in, n_species, particles, n_steps):
         self.cells = cells
         self.particles = particles
@@ -19,7 +19,7 @@ class Sampling_manager:
         self.p_step = 0
         self.instant_sampler = Instant_sampler(cells, cells_in, particles,
                                                n_species)
-        self.time_sampler = Time_sampler(cells, cells_in, particles, n_steps,
+        self.time_sampler = TimeSampler(cells, cells_in, particles, n_steps,
                                          n_species)
     
     
@@ -42,7 +42,7 @@ class Sampling_manager:
 
 
 
-class Time_sampler:
+class TimeSampler:
     def __init__(self, cells, cells_in, particles, n_steps, n_species):
         self.cells = cells
         self.cells_in = cells_in

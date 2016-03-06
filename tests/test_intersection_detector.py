@@ -7,8 +7,8 @@ Created on Wed Sep 30 06:37:21 2015
 
 import numpy as np
 import unittest
-import detector as dm_d
-import geometry as dm_g
+import dsmc.dsmc.detector as dm_d
+import dsmc.dsmc.geometry as dm_g
 
 
 class test_IntersectionDetector(unittest.TestCase):

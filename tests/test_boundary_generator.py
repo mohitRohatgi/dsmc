@@ -7,9 +7,9 @@ Created on Wed Jan  6 23:23:56 2016
 
 import unittest
 import numpy as np
-from boundary import BoundaryGenerator
-from cells import RectCells
-from geometry import Domain
+from dsmc.dsmc.boundary import BoundaryGenerator
+from dsmc.dsmc.cells import RectCells
+from dsmc.dsmc.geometry import Domain
 
 
 class TestCreateCell(unittest.TestCase):

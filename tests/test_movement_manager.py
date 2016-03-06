@@ -7,9 +7,10 @@ Created on Mon Oct 19 21:46:14 2015
 
 import unittest
 import numpy as np
-import particles as dm_p
-import reflector as dm_r
-import geometry as dm_g
+import dsmc.dsmc.particles as dm_p
+import dsmc.dsmc.movement as dm_r
+import dsmc.dsmc.geometry as dm_g
+from dsmc.dsmc.reflection_models import Specular
 
 
 class TestMovementManager(unittest.TestCase):
@@ -23,8 +24,8 @@ class TestMovementManager(unittest.TestCase):
         particles.y = np.ones(100, dtype=float) * 4.0
         particles.u = np.zeros(100, dtype=float)
         particles.v = np.ones(100, dtype=float) * -2.0
-        movement_manager = dm_r.MovementManager(particles, surface)
-        movement_manager.move_all(1, 2.0)
+        movement_manager = dm_r.MovementManager(particles, surface, Specular)
+        movement_manager.move_all(2.0)
         for index in range(100):
             self.assertAlmostEqual(particles.x[index], x[index], 4)
             self.assertAlmostEqual(particles.y[index], 4.0, 4)
@@ -42,8 +43,8 @@ class TestMovementManager(unittest.TestCase):
         particles.y = np.ones(100, dtype=float) * -2.0
         particles.u = np.zeros(100, dtype=float)
         particles.v = np.ones(100, dtype=float) * 2.0
-        movement_manager = dm_r.MovementManager(particles, surface)
-        movement_manager.move_all(1, 4.0)
+        movement_manager = dm_r.MovementManager(particles, surface, Specular)
+        movement_manager.move_all(4.0)
         for index in range(100):
             self.assertAlmostEqual(particles.x[index], x[index], 4)
             self.assertAlmostEqual(particles.y[index], -2.0, 4)
@@ -61,8 +62,8 @@ class TestMovementManager(unittest.TestCase):
         particles.y = np.linspace(1.0, 2.0, 100)
         particles.u = np.ones(100, dtype=float) * -2.0
         particles.v = np.zeros(100, dtype=float)
-        movement_manager = dm_r.MovementManager(particles, surface)
-        movement_manager.move_all(1, 2.0)
+        movement_manager = dm_r.MovementManager(particles, surface, Specular)
+        movement_manager.move_all(2.0)
         for index in range(100):
             self.assertAlmostEqual(particles.x[index], 4.0, 4)
             self.assertAlmostEqual(particles.y[index], y[index], 4)
@@ -80,8 +81,8 @@ class TestMovementManager(unittest.TestCase):
         particles.y = np.linspace(1.0, 4.0, 100)
         particles.u = np.ones(100, dtype=float) * 2.0
         particles.v = np.zeros(100, dtype=float)
-        movement_manager = dm_r.MovementManager(particles, surface)
-        movement_manager.move_all(1, 4.0)
+        movement_manager = dm_r.MovementManager(particles, surface, Specular)
+        movement_manager.move_all(4.0)
         for index in range(100):
             self.assertAlmostEqual(particles.x[index], -2.0, 4)
             self.assertAlmostEqual(particles.y[index], y[index], 4)
@@ -99,8 +100,8 @@ class TestMovementManager(unittest.TestCase):
         particles.y = np.linspace(-1.0, 4.0, 100)
         particles.u = np.ones(100, dtype=float) * -1.0
         particles.v = np.ones(100, dtype=float)
-        movement_manager = dm_r.MovementManager(particles, surface)
-        movement_manager.move_all(1, 2.0)
+        movement_manager = dm_r.MovementManager(particles, surface, Specular)
+        movement_manager.move_all(2.0)
         for index in range(100):
             self.assertAlmostEqual(particles.x[index], x[index], 4)
             self.assertAlmostEqual(particles.y[index], x[index], 4)
@@ -120,8 +121,8 @@ class TestMovementManager(unittest.TestCase):
         particles.u = np.ones(100, dtype=float) * -1.0
         particles.v = np.ones(100, dtype=float) * -1.0
         
-        movement_manager = dm_r.MovementManager(particles, surface)
-        movement_manager.move_all(1, 8.0)
+        movement_manager = dm_r.MovementManager(particles, surface, Specular)
+        movement_manager.move_all(8.0)
         
         for index in range(100):
             self.assertAlmostEqual(particles.u[index], 1.0, 6)
@@ -142,8 +143,8 @@ class TestMovementManager(unittest.TestCase):
         particles.u = np.ones(100, dtype=float) * -1.0
         particles.v = np.ones(100, dtype=float) * -1.0
         
-        movement_manager = dm_r.MovementManager(particles, surface)
-        movement_manager.move_all(1, 8.0)
+        movement_manager = dm_r.MovementManager(particles, surface, Specular)
+        movement_manager.move_all(8.0)
         
         
         
@@ -166,8 +167,8 @@ class TestMovementManager(unittest.TestCase):
         particles.u = np.ones(100, dtype=float) * -1.0
         particles.v = np.ones(100, dtype=float) * -1.0
         
-        movement_manager = dm_r.MovementManager(particles, surface)
-        movement_manager.move_all(1, 8.0)
+        movement_manager = dm_r.MovementManager(particles, surface, Specular)
+        movement_manager.move_all(8.0)
         
         for index in range(100):
             self.assertAlmostEqual(particles.x[index], 7.0, 6)

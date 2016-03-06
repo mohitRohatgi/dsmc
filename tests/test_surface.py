@@ -6,7 +6,7 @@ Created on Fri Jan 22 10:24:06 2016
 """
 
 import unittest
-from geometry import Surface
+from dsmc.dsmc.geometry import Surface
 from numpy import sqrt
 
 class test_Surface(unittest.TestCase):
