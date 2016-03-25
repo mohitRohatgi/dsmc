@@ -8,7 +8,6 @@ Created on Sun Sep 13 23:08:11 2015
 import numpy as np
 
 
-
 class Molecules:
     def __init__(self, dia, visc_index, mass, visc_coeff, dof, tag,
               ref_temp, gamma, volume, number_density):
@@ -92,6 +91,12 @@ class Gas:
         self._find_col_property()
     
     
+    # tag1, tag2 are the tags of the molecules, i.e., it represents the species
+    # of the molecule the particle represents.
+#    def get_gamma_function(self):        
+#        return self.gamma_func
+    
+    
     def get_mass(self):
         return self.mass
     
@@ -168,8 +173,6 @@ class Gas:
     
     # bug here.
     def _find_col_property(self):
-        # boltzmann constant
-        k = 1.3806488e-23
         for index1, mol1 in enumerate(self.species):
             for index2 in range(index1, self.species[-1].get_tag() + 1):
                 mol2 = self.species[index2]
@@ -181,44 +184,13 @@ class Gas:
                                             + mol2.get_visc_index())
                 self.ref_temp[index] = 0.5 * (mol1.get_ref_temp() 
                                             + mol2.get_ref_temp())
-            constt = 0.0
-            for index2, mol2 in enumerate(self.species):
-                if index1 < index2:
-                    index = ((index1 * (index1 + 1)) / 2)
-                    index += index2
-                else:
-                    index = ((index2 * (index2 + 1)) / 2)
-                    index += index1
-                self.mean_f_path[index1] +=((1+mol1.get_mass()/mol2.get_mass())
-                        ** 0.5 * (self.ref_temp[index] / self.temperature)
-                        ** (self.visc_index[index] - 0.5) * self.dia[index]
-                        ** 2.0 * self.mol_frac[index2])
-                
-                constt = (self.dia[index] ** 2.0 * self.mol_frac[index2]
-                        * (self.temperature / self.ref_temp[index]) ** 
-                        (1.0 - self.visc_index[index]) * 
-                        self.ref_temp[index] ** 0.5)
-                
-                self.mean_col_rate[index1] += constt
-                
-                if index1 != index2:
-                    self.col_density_rate[index] = self.mol_frac[index1] * constt
-                else:
-                    self.col_density_rate[index]=self.mol_frac[index1]*constt*0.5
-        
-            self.mean_f_path[index1] = 1 / self.mean_f_path[index1]
-#            print self.mean_f_path[index1]
-            self.mean_f_path[index1] /= (np.pi * self.number_density)
-            self.mean_col_rate[index1] *= 2.0 * self.number_density * np.sqrt(2.0 * 
-                                        k * np.pi / self.reduced_mass)
-            self.mean_col_time[index1] = 1 / self.mean_col_rate[index1]
-#            print "col_rate = ", self.mean_col_rate[index1]
 
 
 # tag represents the species type of particle.
 # particles are stored in an ascending order of the species.
 # for eg. species 1 would be stored in the first n1 particles the species2 for
 # the next n2 particles and so on.
+# tag starts from zero.
 class Particles:
     def __init__(self, n_particles, n_eff=0.0):
         self.num = n_particles
@@ -241,7 +213,7 @@ class Particles:
     # species is a list of molecule instances.
     def setup(self, mole_fraction, species, mpv):
         self.species = species
-        n_species = len(mole_fraction)
+        n_species = len(species)
         for index in range(self.num):
             tag = index % n_species
             self.tag[index] = tag

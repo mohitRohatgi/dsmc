@@ -6,7 +6,6 @@ Created on Sun Sep 13 23:16:38 2015
 """
 import numpy as np
 import particles as dm_p
-import cells as dm_c
 import sampler as dm_s
 
 
@@ -21,8 +20,7 @@ class Initialiser:
         particle_initialiser = ParticleInitialiser(particles, 
                                                    n_particles_in_cell, gas)
         particle_initialiser.run(cells, cells_in)
-        distributor = dm_c.Distributor(cells, particles)
-        distributor.distribute_all_particles()
+        cells.distribute_all_particles(particles)
         sampler = dm_s.Instant_sampler(cells, cells_in, particles, 
                                        gas.get_n_species())
         sampler.run()
@@ -93,11 +91,11 @@ class ParticleInitialiser:
     
     
     def run(self, cells, cells_in):
-        self.init_particles(cells, cells_in)
+        self._init_particles(cells, cells_in)
         self._init_cells(cells, cells_in)
     
     
-    def init_particles(self, cells, cells_in):
+    def _init_particles(self, cells, cells_in):
         self._init_location(cells, cells_in)
         self._init_velocity()
     

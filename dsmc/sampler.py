@@ -176,6 +176,6 @@ class Instant_sampler:
     def _find_number_density(self, index):
         for tag in range(self.n_species):
             constt = (self.cells.get_n_particles(tag, index) * 
-                self.particles.get_n_eff()) / self.cells.get_cell_volume(index)
+                self.particles.get_n_eff()) / self.cells.get_cell_volume()
             
             self.cells.set_number_density(constt, tag, index)

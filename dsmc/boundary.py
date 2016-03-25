@@ -169,28 +169,6 @@ class ParticleGenerator:
         return offset
     
     
-    # this function generates a random location inside the cell provided.
-    def _find_rand_loc(self, cells, cell_index):
-        xc, yc = cells.get_center(cell_index)
-        
-        x = ((2.0 * np.random.rand() - 1) / 2.0 * 
-            cells.get_cell_length(cell_index) + xc)
-        
-        y = ((2.0 * np.random.rand() - 1) / 2.0 *
-            cells.get_cell_width(cell_index) + yc)
-        
-        return (x, y)
-    
-    
-    # this function finds and sets the particle velocity.
-    # mean vel is the velocity vector of the cell in which particle is.
-    def _find_rand_vel(self, particles, index):
-        v1 = np.random.normal(0.0, 0.5) * particles.get_mpv(index)
-        v2 = np.random.normal(0.0, 0.5) * particles.get_mpv(index)
-        v3 = np.random.normal(0.0, 0.5) * particles.get_mpv(index)
-        return (v1, v2, v3)
-    
-    
     # this is a helper function to find the total number of particles needed 
     # to be introduced inside all the inlet cells.
     def _find_inlet_particles(self):
@@ -211,6 +189,28 @@ class ParticleGenerator:
                 count += len(self.cells.get_particles_inside(index))
         
         return count
+    
+    
+    # this function generates a random location inside the cell provided.
+    def _find_rand_loc(self, cells, cell_index):
+        xc, yc = cells.get_center(cell_index)
+        
+        x = ((2.0 * np.random.rand() - 1) / 2.0 * 
+            cells.get_cell_length(cell_index) + xc)
+        
+        y = ((2.0 * np.random.rand() - 1) / 2.0 *
+            cells.get_cell_width(cell_index) + yc)
+        
+        return (x, y)
+    
+    
+    # this function finds and sets the particle velocity.
+    # mean vel is the velocity vector of the cell in which particle is.
+    def _find_rand_vel(self, particles, index):
+        v1 = np.random.normal(0.0, 0.5) * particles.get_mpv(index)
+        v2 = np.random.normal(0.0, 0.5) * particles.get_mpv(index)
+        v3 = np.random.normal(0.0, 0.5) * particles.get_mpv(index)
+        return (v1, v2, v3)
 
 
 

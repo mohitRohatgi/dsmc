@@ -41,7 +41,7 @@ def main():
     
     
 #    ensemble_sample = 10
-    time_av_sample = 10
+    time_av_sample = 100
     dof = 3.0
     mass = 66.3e-27
     viscosity_coeff = 2.117

@@ -29,7 +29,7 @@ import numpy as np
 # would contain list particles inside 1st cell and so on.
 # It is assumed that the rect cells have only horizontal and vertical sides.
 class RectCells:
-    def __init__(self, n_x, n_y, length, width, centre, n_species):
+    def __init__(self, n_x, n_y, length, width, centre, n_species=1):
         """ 
         storing the x values of cell centre in xc of cells at y = 0 and
         y values in yc at x = 0.
@@ -63,6 +63,25 @@ class RectCells:
         self.y_max = self.datum[1] + float(width)
         self.domain_length = length
         self.domain_width = width
+        self.particles_out = []
+    
+
+    # this function distributes particle in a rectangular cell.
+    # assumption: particles are inside the domain.
+    def distribute_all_particles(self, particles):
+        self.reset_particles()
+        self.particles_out = []
+        for index in range(particles.get_particles_count()):            
+            cell_index = self.find_cell_index(particles.get_x(index), 
+                                              particles.get_y(index))
+            if cell_index == None:
+                self.particles_out.append(index)
+            else:
+                self.add_particle(cell_index, index, particles.get_tag(index))
+    
+    
+    def get_particles_out(self):
+        return self.particles_out
     
     
     # assuming constant cell length and cell width.
@@ -194,7 +213,7 @@ class RectCells:
         return self.cell_width
     
     
-    def get_cell_volume(self, cell_index=None):
+    def get_cell_volume(self):
         return self.cell_volume
     
     
@@ -306,30 +325,3 @@ class RectCells:
             self.w = velz
         else:
             self.w[cell_index] = velz
-
-
-
-class Distributor:
-    def __init__(self, cells, particles):
-        self.cells = cells
-        self.particles = particles
-        self.particles_out = []
-    
-
-    # this function distributes particle in a rectangular cell.
-    # assumption: particles are inside the domain.
-    def distribute_all_particles(self):
-        self.cells.reset_particles()
-        self.particles_out = []
-        for index in range(len(self.particles.x)):            
-            cell_index = self.cells.find_cell_index(self.particles.get_x(index), 
-                                                    self.particles.get_y(index))
-            if cell_index == None:
-                self.particles_out.append(index)
-            else:
-                self.cells.add_particle(cell_index, index, 
-                                        self.particles.get_tag(index))
-    
-    
-    def get_particles_out(self):
-        return self.particles_out
