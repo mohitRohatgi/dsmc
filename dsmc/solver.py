@@ -69,9 +69,8 @@ class DsmcSolver:
             
             if (self.flag):
                 particles_out = self.cells.get_particles_out()
-                start = time.time()
+#                print "length of particles out = ", len(particles_out)
                 self.boundary_manager.run(particles_out, self.dt)
-                bound_time += time.time() - start
         
         self.temperature = self.sampling_manager.get_temperature()
         self.number_density = self.sampling_manager.get_number_density()

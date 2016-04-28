@@ -41,14 +41,14 @@ def main():
     
     
 #    ensemble_sample = 10
-    time_av_sample = 100
+    time_av_sample = 1000
     dof = 3.0
     mass = 66.3e-27
     viscosity_coeff = 2.117
     viscosity_index = 0.81
     mole_fraction = [0.5, 0.5]
     dia = 4.17e-10
-    mach = [5.0, 0.0, 0.0]
+    mach = [2.0, 0.0, 0.0]
     temperature = 300.0
     ref_temperature = 273.0
     number_density = 1.699e19
@@ -63,10 +63,10 @@ def main():
     gas.setup()
 #    dl = min(gas.mean_f_path)
 #    dt = min(gas.mean_col_time)
-    dt = 1.0e-5
+    dt = 1.0e-7
 #    print dt
 #    cell_x, cell_y = np.ceil(length / dl), np.ceil(width / dl)
-    cell_x, cell_y = 10, 10
+    cell_x, cell_y = 300, 300
     cells = RectCells(cell_x, cell_y, length, width, center, 2)
     
     start_time = time()

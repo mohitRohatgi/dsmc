@@ -71,24 +71,33 @@ class Gas:
         self.mach = mach
         self.temperature = temperature
         #using tag in substitue of finding length of the array.
-        constt = ((species[-1].get_tag() + 2) * (species[-1].get_tag() + 1)) / 2
-        self.mean_f_path = np.zeros(species[-1].get_tag() + 1)
-        self.mean_col_time = np.zeros(species[-1].get_tag() + 1)
-        self.mean_col_rate = np.zeros(constt)
-        self.col_density_rate = np.zeros(constt)
-        self.dia = np.zeros(constt)
-        self.ref_temp = np.zeros(constt)
         self.mpv = np.zeros(len(species))
         self.reduced_mass = 0.0
-        self.visc_index = np.zeros(constt)
         self.gamma = 0.0
         self.mass = 0.0
     
     
     def setup(self):
-        self._find_number_density()
-        self._find_gas_property()
-        self._find_col_property()
+        # finding number density ...
+        for index, species in enumerate(self.species):
+            self.number_density += species.get_number_density()
+        
+        # finding gas properties ...
+        prod = 1.0
+        count = 0.0
+        k = 1.3806488e-23
+        for index,species in enumerate(self.species):
+            self.gamma += species.get_gamma() * self.mol_frac[index]
+            self.mass += species.get_mass() * self.mol_frac[index]
+            self.mpv[index] = np.sqrt(2.0 * k * self.temperature 
+                                            / species.get_mass())
+            if len(self.species) > 1:
+                prod *= species.get_mass()
+                count += species.get_mass()
+        if len(self.species) > 1:
+            self.reduced_mass = prod / count
+        else:
+            self.reduced_mass = 0.5 * self.species[0].get_mass()
     
     
     # tag1, tag2 are the tags of the molecules, i.e., it represents the species
@@ -143,47 +152,6 @@ class Gas:
     
     def get_mpv(self):
         return self.mpv
-    
-    
-    def _find_number_density(self):
-        for index, species in enumerate(self.species):
-            self.number_density += species.get_number_density()
-    
-    
-    def _find_gas_property(self):
-        self.gamma = 0.0
-        self.mass = 0.0
-        prod = 1.0
-        count = 0.0
-        k = 1.3806488e-23
-        for index,species in enumerate(self.species):
-            self.gamma += species.get_gamma() * self.mol_frac[index]
-            self.mass += species.get_mass() * self.mol_frac[index]
-            self.mpv[index] = np.sqrt(2.0 * k * self.temperature 
-                                            / species.get_mass())
-            if len(self.species) > 1:
-                prod *= species.get_mass()
-                count += species.get_mass()
-        if len(self.species) > 1:
-            self.reduced_mass = prod / count
-        else:
-            self.reduced_mass = 0.5 * self.species[0].get_mass()
-#        print "reduced = ", self.reduced_mass
-    
-    
-    # bug here.
-    def _find_col_property(self):
-        for index1, mol1 in enumerate(self.species):
-            for index2 in range(index1, self.species[-1].get_tag() + 1):
-                mol2 = self.species[index2]
-                index = ((index1 * (index1 + 1)) / 2)
-                index += index2
-                self.ref_temp[index] = self.species[index2].get_ref_temp()
-                self.dia[index] = 0.5 * (mol1.get_dia() + mol2.get_dia())
-                self.visc_index[index] = 0.5 * (mol1.get_visc_index() 
-                                            + mol2.get_visc_index())
-                self.ref_temp[index] = 0.5 * (mol1.get_ref_temp() 
-                                            + mol2.get_ref_temp())
 
 
 # tag represents the species type of particle.

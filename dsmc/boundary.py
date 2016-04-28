@@ -10,7 +10,8 @@ class BoundaryManager:
         self.boundary = BoundaryGenerator(cells, domain).get_boundary()
         
         self.particle_generator = ParticleGenerator(self.boundary, gas, cells, 
-                                    n_particles_in_cell, particles.get_n_eff())
+                                    n_particles_in_cell, particles.get_n_eff(),
+                                    particles)
         
         self.in_detector = InParticleDetector(cells)
         self.modifier = ParticleModifier(particles)
@@ -23,6 +24,7 @@ class BoundaryManager:
         self.in_detector.detect(inlet_particles, dt)
         self.in_detector.detect(zero_grad_particles, dt)
         self.modifier.run(self.in_detector, particles_out)
+        self.in_detector.reset_particle_map()
 
 
 
@@ -89,7 +91,8 @@ class BoundaryGenerator:
 # initial boundary coondition while, for zero gradient boundary, particles are
 # generated at the properties of the adjacent cells.
 class ParticleGenerator:
-    def __init__(self, boundary, gas, cells, n_particles_in_cell, n_eff):
+    def __init__(self, boundary, gas, cells, n_particles_in_cell,
+                 n_eff, particles):
         k = 1.3806488e-23
         c = np.sqrt(gas.get_gamma() * gas.get_temperature() * k / gas.get_mass())
         self.n_particles_in_cell = n_particles_in_cell
@@ -97,6 +100,7 @@ class ParticleGenerator:
         self.n_eff = n_eff
         self.gas = gas
         self.cells = cells
+        self.particles = particles
         n_particles = self._find_inlet_particles()
         self.inlet_particles = dm_p.Particles(n_particles, self.n_eff)
         self.inlet_particles.setup(gas.get_mol_frac(), gas.get_species(),
@@ -117,7 +121,7 @@ class ParticleGenerator:
         start = 0
         for zero_grad_cell in self.boundary.get_zero_grad_cells():
             start = self._init_zero_grad_particles(zero_grad_cell, start)
-    
+        
     
     def get_inlet_particles(self):
         return self.inlet_particles
@@ -153,19 +157,29 @@ class ParticleGenerator:
         for cell_index in range(len(zero_grad_cell.get_temperature())):
             i = 0
             index = self.boundary.get_adj_cell_index(zero_grad_cell, cell_index)
-            while i < len(self.cells.get_particles_inside(index)):
+            particles_inside = self.cells.get_particles_inside(index)
+            while i < len(particles_inside):
                 x, y = self._find_rand_loc(zero_grad_cell, cell_index)
                 self.zero_grad_particles.set_x(x, offset + i)
                 self.zero_grad_particles.set_y(y, offset + i)
                 
-                v1, v2, v3 = self._find_rand_vel(self.zero_grad_particles, 
-                                                 offset + i)
-                self.zero_grad_particles.set_velx(v1 + self.cells.get_velx(cell_index))
-                self.zero_grad_particles.set_vely(v2 + self.cells.get_vely(cell_index))
-                self.zero_grad_particles.set_velz(v3 + self.cells.get_velz(cell_index))
+                
+#                v1, v2, v3 = self._find_rand_vel(self.zero_grad_particles, 
+#                                                 offset + i)
+#                self.zero_grad_particles.set_velx(v1 + self.cells.get_velx(cell_index))
+#                self.zero_grad_particles.set_vely(v2 + self.cells.get_vely(cell_index))
+#                self.zero_grad_particles.set_velz(v3 + self.cells.get_velz(cell_index))
+                
+                particle_index = particles_inside[i]
+                zero_grad_index = offset + i
+                self.zero_grad_particles.set_velx(self.particles.get_velx(particle_index),
+                                                  zero_grad_index)
+                self.zero_grad_particles.set_vely(self.particles.get_vely(particle_index),
+                                                  zero_grad_index)
+                self.zero_grad_particles.set_velz(self.particles.get_velz(particle_index),
+                                                  zero_grad_index)
                 i += 1
             offset += i
-        
         return offset
     
     
@@ -185,8 +199,8 @@ class ParticleGenerator:
         count = 0
         for zero_grad_cells in self.boundary.get_zero_grad_cells():
             for index in range(len(zero_grad_cells.get_temperature())):
-                index = self.boundary.get_adj_cell_index(zero_grad_cells, index)
-                count += len(self.cells.get_particles_inside(index))
+                cell_index = self.boundary.get_adj_cell_index(zero_grad_cells, index)
+                count += len(self.cells.get_particles_inside(cell_index))
         
         return count
     
@@ -195,11 +209,8 @@ class ParticleGenerator:
     def _find_rand_loc(self, cells, cell_index):
         xc, yc = cells.get_center(cell_index)
         
-        x = ((2.0 * np.random.rand() - 1) / 2.0 * 
-            cells.get_cell_length(cell_index) + xc)
-        
-        y = ((2.0 * np.random.rand() - 1) / 2.0 *
-            cells.get_cell_width(cell_index) + yc)
+        x = ((np.random.rand() - 0.5) * cells.get_cell_length(cell_index) + xc)
+        y = ((np.random.rand() - 0.5) * cells.get_cell_width(cell_index) + yc)
         
         return (x, y)
     
@@ -222,15 +233,17 @@ class InParticleDetector:
     
     
     def detect(self, particles, dt):
-        particles_out = []
+        particles_in = []
         for index in range(len(particles.get_x())):
             x = particles.get_x(index) + particles.get_velx(index) * dt
-            y = particles.get_x(index) + particles.get_vely(index) * dt
+            y = particles.get_y(index) + particles.get_vely(index) * dt
             if self.cells.is_inside_domain(x, y):
-                particles_out.append(index)
-        if len(particles_out) > 0:
-            self.particle_map[particles] = particles_out
-    
+                particles_in.append(index)
+#            else:
+#                print "x, y = ", x,y
+        if len(particles_in) > 0:
+            self.particle_map[particles] = particles_in
+        
     
     def get_particles_in(self, particles):
         return self.particle_map[particles]
@@ -238,6 +251,11 @@ class InParticleDetector:
     
     def get_particles(self):
         return self.particle_map.keys()
+    
+    # This function is needed to clear the so as to avoid the accumulation of 
+    # particles generated in previous iterations.
+    def reset_particle_map(self):
+        self.particle_map = {}
 
 
 
@@ -249,7 +267,7 @@ class ParticleModifier:
     
     
     def run(self, in_detector, particles_out):
-        count = 0.0
+        count = 0
         for b_particles in in_detector.get_particles():
             particles_in = in_detector.get_particles_in(b_particles)
             count += len(particles_in)
@@ -262,7 +280,7 @@ class ParticleModifier:
                     particles_in.append(particle_in)
                     self._add_particles(b_particles, particles_in)
                     break
-    
+        
     
     def _modify_particles(self, b_particles, particle_in, particle_out):
         self.particles.x[particle_out] = b_particles.x[particle_in]

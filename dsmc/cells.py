@@ -80,6 +80,12 @@ class RectCells:
                 self.add_particle(cell_index, index, particles.get_tag(index))
     
     
+    # randomising all particles.
+    def shuffle_all_particles(self):
+        for cell_particles in self.particles_inside:
+            np.random.shuffle(cell_particles)
+    
+    
     def get_particles_out(self):
         return self.particles_out
     

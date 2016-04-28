@@ -44,7 +44,9 @@ class test_ParticleGenerator(unittest.TestCase):
                     ref_temperature, gamma, volume, number_density)
         gas = dm_p.Gas([argon, argon1], mole_fraction, mach, temperature)
         gas.setup()
-        particle_generator = dm_b.ParticleGenerator(boundary, gas, cells, 10, 1.0)
+        particles = dm_p.Particles(100)
+        particle_generator = dm_b.ParticleGenerator(boundary, gas, cells,
+                                                    10, 1.0, particles)
         particle_generator.run()
         inlet_particles = particle_generator.get_inlet_particles()
         zero_grad_particles = particle_generator.get_zero_grad_particles()

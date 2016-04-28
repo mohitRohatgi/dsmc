@@ -57,8 +57,8 @@ class Diffuse:
         mpv = np.sqrt(2.0 * self.k * T / self.particles.get_mass(particle_index))
         normal = self.surf_group.get_surf_normal(group_index, surf_index)
         tangent = self.surf_group.get_surf_tangent(group_index, surf_index)
-        c1 = np.random.normal(0.0, 0.5) * mpv
-        c2 = np.random.normal(0.0, 0.5) * mpv
+        c1 = np.random.normal(0.0, 1.5) * mpv
+        c2 = np.random.normal(0.0, 1.5) * mpv
         theta = np.random.random() * 2.0 * np.pi
         self.particles.set_velz(c2 * np.sin(theta), particle_index)
         c2 *= np.cos(theta)
