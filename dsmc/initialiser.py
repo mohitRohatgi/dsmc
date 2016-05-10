@@ -11,15 +11,23 @@ import sampler as dm_s
 
 class Initialiser:
     @staticmethod
-    def run(cells, gas, surf_group, volume, n_particles_in_cell, ref_point):
-        cell_detector = CellDetector(cells, surf_group, ref_point)
-        cells_in = cell_detector.detect_all()
-        num = n_particles_in_cell * len(cells_in)
-        particles = dm_p.Particles(num, gas.get_number_density() * volume / num)
+    def run(cells, gas, surf_group, domain, n_par_in_cell,
+            ref_point, closed=False):
+        if closed:
+            cells_in = range(len(cells.get_temperature()))
+        else:
+            cell_detector = CellDetector(cells, surf_group, ref_point)
+            cells_in = cell_detector.detect_all()
+        num = n_par_in_cell * len(cells_in)
+        n_eff = gas.get_number_density() * domain.get_volume() / num
+        
+        particles = dm_p.Particles(num, n_eff)
         particles.setup(gas.get_mol_frac(), gas.get_species(), gas.get_mpv())
-        particle_initialiser = ParticleInitialiser(particles, 
-                                                   n_particles_in_cell, gas)
-        particle_initialiser.run(cells, cells_in)
+        
+        particle_init = ParticleInitialiser(particles, n_par_in_cell,
+                                            gas, domain, num)
+        particle_init.run(cells, cells_in)
+        
         cells.distribute_all_particles(particles)
         sampler = dm_s.Instant_sampler(cells, cells_in, particles, 
                                        gas.get_n_species())
@@ -84,35 +92,78 @@ class CellDetector:
 
 
 class ParticleInitialiser:
-    def __init__(self, particles, n_particles_in_cell, gas):
+    def __init__(self, particles, n_par_in_cell, gas, domain, num):
         self.particles = particles
-        self.n_particles_in_cell = int(n_particles_in_cell)
+        self.n_par_in_cell = int(n_par_in_cell)
         self.gas = gas
+        self.domain = domain
+        self.sample = np.random.permutation(num)
     
     
     def run(self, cells, cells_in):
-        self._init_particles(cells, cells_in)
-        self._init_cells(cells, cells_in)
-    
-    
-    def _init_particles(self, cells, cells_in):
         self._init_location(cells, cells_in)
         self._init_velocity()
     
     
-    def _init_location(self, cells, cells_in, offset=0):
-        for index1, cell_index in enumerate(cells_in):
-            xc, yc = cells.get_center(cell_index)
-            index = index1 * self.n_particles_in_cell + offset
-            for i in range(self.n_particles_in_cell):
-                constt = ((2.0 * np.random.rand() - 1) / 2.0 * 
-                            cells.get_cell_length(index + i) + xc)
-                self.particles.set_x(constt, index + i)
+    # It is assumed that only one of the constraints is applied during 
+    # initialization. The following are the constrainsts :-
+    # 1. There are different patches where different molecules may be 
+    #    initialized. for e.g. shocktube
+    # 2. There is a constraint of space for every molecule in the domain.
+    #    for e.g. flow past a wedge.
+    #
+    # The above constraints can be satisfied simultaneously. The following can 
+    # be a solution.
+    # Find the cell indices that satisfy the constraints.
+    # For cell index, check all the patches it lies in and consequently make a
+    # sequence of these cell indices for each patch.
+    # Initialise the particles representing the molecule inside that patch in 
+    # their respective cells.
+    def _init_location(self, cells, cells_in):
+        if self.domain.is_patched():
+            x = np.zeros(len(self.particles.get_x()))
+            y = np.zeros(len(self.particles.get_y()))
+            
+            start = 0
+            for tag in range(self.gas.get_n_species()):
+                end = self.particles.get_tag_num(tag) + start
                 
-                constt = ((2.0 * np.random.rand() - 1) / 2.0 *
-                        cells.get_cell_width(index + i) + yc)
-                self.particles.set_y(constt, index + i)
-        return index + self.n_particles_in_cell
+                x = self.domain.get_patch_x(tag)
+                x_min = x[0]
+                x_max = x[1]
+                if x_min > x_max:
+                    c = x_min
+                    x_min = x_max
+                    x_max = c
+                
+                
+                y = self.domain.get_patch_x(tag)
+                y_min = y[0]
+                y_max = y[1]
+                if y_min > y_max:
+                    c = y_min
+                    y_min = y_max
+                    y_min = c
+                
+                x[start:end] = np.random.random(end - start) * (x_max - x_min) + x_min
+                y[start:end] = np.random.random(end - start) * (y_max - y_min) + y_min
+                start = end
+            
+            self.particles.set_x(x)
+            self.particles.set_y(y)
+        
+        else:
+            for index1, cell_index in enumerate(cells_in):
+                xc, yc = cells.get_center(cell_index)
+                index = index1 * self.n_par_in_cell
+                length = cells.get_cell_length(cell_index)
+                width = cells.get_cell_length(cell_index)
+                for i in range(self.n_par_in_cell):
+                    x = ((2.0 * np.random.rand() - 1) / 2.0 * length + xc)
+                    self.particles.set_x(x, self.sample[index + i])
+                    
+                    y = ((2.0 * np.random.rand() - 1) / 2.0 * width + yc)
+                    self.particles.set_y(y, self.sample[index + i])
     
     
     # c is the speed of sound.
@@ -130,16 +181,16 @@ class ParticleInitialiser:
         self.particles.set_velz(c3 * mpv + self.gas.get_mach_z() * c)
     
     
-    def _init_cells(self, cells, cells_in):
-        c = np.sqrt(self.gas.get_temperature() * self.gas.get_gamma() * 8.314)
-        
-        n_particles = (self.n_particles_in_cell * np.array(self.gas.get_mol_frac()))
-        
-        for index in cells_in:
-            cells.set_temperature(self.gas.get_temperature(), index)
-            
-            for tag in range(len(self.gas.get_species())):
-                cells.set_n_particles(n_particles[tag], tag, index)
-            
-            cells.set_velx(self.gas.get_mach_x() * c, index)
-            cells.set_vely(self.gas.get_mach_y() * c, index)
+#    def _init_cells(self, cells, cells_in):
+#        c = np.sqrt(self.gas.get_temperature() * self.gas.get_gamma() * 8.314)
+#        
+#        n_particles = (self.n_par_in_cell * np.array(self.gas.get_mol_frac()))
+#        
+#        for index in cells_in:
+#            cells.set_temperature(self.gas.get_temperature(), index)
+#            
+#            for tag in range(len(self.gas.get_species())):
+#                cells.set_n_particles(n_particles[tag], tag, index)
+#            
+#            cells.set_velx(self.gas.get_mach_x() * c, index)
+#            cells.set_vely(self.gas.get_mach_y() * c, index)

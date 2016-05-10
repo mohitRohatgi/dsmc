@@ -15,31 +15,33 @@ import time as time
 
 
 class DsmcSolver:
-    def __init__(self, cells, gas, domain, surf_group, n_particles_in_cell,
-                 ref_point, dt, n_steps, Detector, Collider, Reflector):
+    def __init__(self, cells, gas, domain, surf_group,
+                 n_par_in_cell, ref_point, dt, n_steps,
+                 Detector, Collider, Reflector, ignore_frac=0.1):
         
         self.n_steps = n_steps
         self.cells = cells
         self.particles, self.cells_in = Initialiser.run(cells, gas, surf_group,
-                            domain.get_volume(), n_particles_in_cell, ref_point)
+                                            domain, n_par_in_cell, ref_point)
         
         self.collision_manager = CollisionManager(cells, self.particles, gas,
                                                   dt, Detector, Collider)
         
         self.sampling_manager = SamplingManager(cells, self.cells_in, 
-                                gas.get_n_species(), self.particles, n_steps)
+                                            gas.get_n_species(), self.particles,
+                                            n_steps, ignore_frac)
         
-        self.flag = False
         self.movement_manager = MovementManager(self.particles, surf_group, 
                                                 Reflector)
         self.dt = dt
         self.temperature = np.zeros(len(cells.get_temperature()))
         self.number_density = np.zeros((gas.get_n_species(), 
                                         len(cells.get_temperature())))
+        self.open = False
         if (domain.is_open()):
-            self.flag = True
+            self.open = True
             self.boundary_manager = dm_b.BoundaryManager(cells, domain, gas, 
-                                        self.particles, n_particles_in_cell)
+                                        self.particles, n_par_in_cell)
             self.boundary_manager.run([], self.dt)
     
     
@@ -67,13 +69,11 @@ class DsmcSolver:
             self.sampling_manager.run()
             samp_time += time.time() - start
             
-            if (self.flag):
+            if (self.open):
                 particles_out = self.cells.get_particles_out()
 #                print "length of particles out = ", len(particles_out)
                 self.boundary_manager.run(particles_out, self.dt)
         
-        self.temperature = self.sampling_manager.get_temperature()
-        self.number_density = self.sampling_manager.get_number_density()
         print "movement time = ", move_time
         print "distribution time = ", dist_time
         print "collisio time = ", col_time
@@ -88,24 +88,16 @@ class DsmcSolver:
         return index_list
     
     
-    # this function should return number density in 1d numpy array
-    def get_1d_num_den(self):
-        return self.number_density
-    
-    
-    # this function should return temperature in 1d numpy array
-    def get_1d_temperature(self):
-        return self.temperature
-    
-    
     # this function should return temperature in 2d numpy array
     def get_2d_temperature(self, cell_x, cell_y):
-        return self._convert_to_2d(cell_x, cell_y, self.temperature)
+        return self._convert_to_2d(cell_x, cell_y, 
+                                   self.sampling_manager.get_temperature())
     
     
     # this function should return number density in 2d numpy array
-    def get_2d_num_den(self, cell_x, cell_y):
-        return self._convert_to_2d(cell_x, cell_y, self.number_density)
+    def get_2d_num_den(self, cell_x, cell_y, tag=0):
+        return self._convert_to_2d(cell_x, cell_y,
+                                   self.sampling_manager.get_number_density(tag))
     
     
     # this function should convert 1d numpy array to 2d numpy array given

@@ -10,18 +10,37 @@ from numpy import sqrt
 # assuming domain is rectangular and surface is a polygon.
 # inlet, outlet and surface need to be wrapped in a list even if they are just 
 # represented by a single point.
+# patch x is a dict of x coordinate of the particle vpatches,
+# if present in the domain
+# A patch of particles in a domain means a subspace of whole domain of the 
+# simulation in which a particular molecule is constricted initially.
+# patches of different molecules may coincide. 
+# One patch can also be a subset of another patch.
+# The key of the patch should be its tag.
 
 class Domain:
-    def __init__(self, volume, inlet=None, zero_grad=None, outlet=None):
+    def __init__(self, volume, inlet=None, zero_grad=None,
+                 outlet=None, patch_x=None, patch_y=None):
         self.inlet = inlet
         self.zero_grad = zero_grad
         self.outlet = outlet
         self.volume = volume
+        self.patch_x = patch_x
+        self.patch_y = patch_y
         if (inlet == None or len(inlet) == 0) and (
             outlet == None or len(outlet == 0)):
-            self.bool = False
+            self.open = False
         else:
-            self.bool = True
+            self.open = True
+    
+    def get_patch_x(self, tag):
+        return self.patch_x[tag]
+    
+    def get_patch_y(self, tag):
+        return self.patch_y[tag]
+    
+    def is_patched(self):
+        return bool(self.patch_x)
     
     def get_inlet(self):
         return self.inlet
@@ -48,7 +67,7 @@ class Domain:
         self.zero_grad = zero_grad
     
     def is_open(self):
-        return self.bool
+        return self.open
     
     def is_inlet_on(self):
         return self.inlet != None

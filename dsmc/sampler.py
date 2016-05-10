@@ -11,7 +11,8 @@ import numpy as np
 # p_time is the present time of the simulation while time0 is the initial
 # f_time is the final time.
 class SamplingManager:
-    def __init__(self, cells, cells_in, n_species, particles, n_steps):
+    def __init__(self, cells, cells_in, n_species, 
+                 particles, n_steps, ignore_frac):
         self.cells = cells
         self.particles = particles
         self.p_time = 0.0
@@ -20,7 +21,7 @@ class SamplingManager:
         self.instant_sampler = Instant_sampler(cells, cells_in, particles,
                                                n_species)
         self.time_sampler = TimeSampler(cells, cells_in, particles, n_steps,
-                                         n_species)
+                                         n_species, ignore_frac)
     
     
     def run(self):
@@ -37,13 +38,14 @@ class SamplingManager:
         return self.time_sampler.get_all_number_density()
     
     
-    def get_number_density(self, species_index=0):
-        return self.time_sampler.get_number_density(species_index)
+    def get_number_density(self):
+        return self.time_sampler.get_number_density()
 
 
 
 class TimeSampler:
-    def __init__(self, cells, cells_in, particles, n_steps, n_species):
+    def __init__(self, cells, cells_in, particles, 
+                 n_steps, n_species, ignore_frac):
         self.cells = cells
         self.cells_in = cells_in
         self.particles = particles
@@ -52,6 +54,7 @@ class TimeSampler:
         self.n_steps = n_steps
         self.step_counter = 0
         self.n_species = n_species
+        self.ignore_frac = ignore_frac
     
     
     def get_all_number_density(self):
@@ -68,8 +71,9 @@ class TimeSampler:
     
     def sample_domain(self):
         self.step_counter += 1
-        for index in self.cells_in:
-            self._sample_cell(index)
+        if (self.step_counter >= self.n_steps * self.ignore_frac):
+            for index in self.cells_in:
+                self._sample_cell(index)
     
     
     def _sample_cell(self, cell_index):
@@ -84,10 +88,10 @@ class TimeSampler:
     
     def _output(self, cell_index):
         
-        self.temperature[cell_index] /= self.step_counter
+        self.temperature[cell_index] /= self.n_steps * (1.0 - self.ignore_frac)
         
         for tag in range(self.n_species):
-            self.number_density[tag][cell_index] /= self.step_counter
+            self.number_density[tag][cell_index] /= self.n_steps * (1.0 - self.ignore_frac)
 
 
 
@@ -115,10 +119,6 @@ class Instant_sampler:
     
     
     def _find_property(self, cell_index):
-        self.cells.set_velx(0.0, cell_index)
-        self.cells.set_vely(0.0, cell_index)
-        self.cells.set_velz(0.0, cell_index)
-        self.cells.set_mass(0.0, cell_index)
         count = 0
         u, v, w, mass = 0.0, 0.0, 0.0, 0.0
         

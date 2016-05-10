@@ -66,7 +66,7 @@ class Molecules:
 class Gas:
     def __init__(self, species, mol_frac, mach, temperature):
         self.species = species
-        self.mol_frac = mol_frac
+        self.mol_frac = np.asarray(mol_frac)
         self.number_density = 0.0
         self.mach = mach
         self.temperature = temperature
@@ -155,9 +155,13 @@ class Gas:
 
 
 # tag represents the species type of particle.
+# particles representing the same type of molecule but are separated from each 
+# other by a boundary (e.g. diaphram) should also be considered of different 
+# tag but with same properties. This would make initialisation easier.
 # particles are stored in an ascending order of the species.
-# for eg. species 1 would be stored in the first n1 particles the species2 for
-# the next n2 particles and so on.
+# for eg. species 1 would be stored in the first n1 particles, species2 for
+# the next n2 particles and so on. Hence there is a chunk of memmory alloted to
+# a particular tag.
 # tag starts from zero.
 class Particles:
     def __init__(self, n_particles, n_eff=0.0):
@@ -174,18 +178,58 @@ class Particles:
         self.tag = np.zeros(n_particles, dtype = int)
         self.mpv = np.zeros(n_particles)
         self.species = []
+        # end of tag particles conveys more information than the start since 
+        # the start would always be 0 while end would be a variable.
+        self.tag_num = []
 
 
     # this function should only be called once.
     # sets the particles according to the molecules it represents.
     # species is a list of molecule instances.
     def setup(self, mole_fraction, species, mpv):
+        
+        # a trivial check for mole fraction.
+        if abs(sum(mole_fraction) - 1.0) > 1.0e-8:
+            raise Exception("Mole Fraction doesn't sums to 1.")
+        
         self.species = species
+        mole_fraction = np.asarray(mole_fraction)
+        rarified_index = np.argmin(mole_fraction)
+        abundant_index = np.argmax(mole_fraction)
         n_species = len(species)
-        for index in range(self.num):
-            tag = index % n_species
-            self.tag[index] = tag
-            self.mpv[index] = mpv[tag]
+        self.tag_num = (mole_fraction * self.num).astype(int)
+        tot_num = int(sum(self.tag_num))
+        
+        if tot_num != self.num:
+            # there is a possibility of total number of particles to be greater than
+            # the total number defined at initialisation. If it happens, most
+            # abundant particles are decreased. This won't affect mole fraction by
+            # much. Direct re-initialisation of attributes might also have been 
+            # done but this approach grants more freedom.
+            if tot_num > self.num:
+                self.tag_num[abundant_index] -= tot_num - self.num
+            
+            # Due to computational errors of the machine, few particles would be
+            # left out. These particles are considered to belong to the most rarified
+            # molecule. Hence first initialising left over particles with rarified
+            # molecule properties.
+            else:
+                self.tag_num[rarified_index] += self.num - tot_num
+        
+        
+        start = 0
+        for tag in range(n_species):
+            
+            end = start + self.tag_num[tag]
+            
+            self.tag[start:end] = tag
+            self.mpv[start:end] = mpv[tag]
+            
+            start = end
+    
+    
+    def get_tag_num(self, tag):
+        return self.tag_num[tag]
 
 
     def move_all(self, dt):
@@ -276,7 +320,7 @@ class Particles:
         return self.x[index]
     
     
-    def get_y(self, index):
+    def get_y(self, index=None):
         if index == None:
             return self.y
         return self.y[index]
@@ -336,3 +380,7 @@ class Particles:
             self.w = velz
         else:
             self.w[index] = velz
+    
+    
+    def set_tag(self, tag, index):
+        self.tag[index] = tag

@@ -118,6 +118,7 @@ class ParticleGenerator:
         
         n_particles = self._find_zero_grad_particles()
         self.zero_grad_particles = dm_p.Particles(n_particles, self.n_eff)
+        
         start = 0
         for zero_grad_cell in self.boundary.get_zero_grad_cells():
             start = self._init_zero_grad_particles(zero_grad_cell, start)
@@ -163,13 +164,6 @@ class ParticleGenerator:
                 self.zero_grad_particles.set_x(x, offset + i)
                 self.zero_grad_particles.set_y(y, offset + i)
                 
-                
-#                v1, v2, v3 = self._find_rand_vel(self.zero_grad_particles, 
-#                                                 offset + i)
-#                self.zero_grad_particles.set_velx(v1 + self.cells.get_velx(cell_index))
-#                self.zero_grad_particles.set_vely(v2 + self.cells.get_vely(cell_index))
-#                self.zero_grad_particles.set_velz(v3 + self.cells.get_velz(cell_index))
-                
                 particle_index = particles_inside[i]
                 zero_grad_index = offset + i
                 self.zero_grad_particles.set_velx(self.particles.get_velx(particle_index),
@@ -177,6 +171,8 @@ class ParticleGenerator:
                 self.zero_grad_particles.set_vely(self.particles.get_vely(particle_index),
                                                   zero_grad_index)
                 self.zero_grad_particles.set_velz(self.particles.get_velz(particle_index),
+                                                  zero_grad_index)
+                self.zero_grad_particles.set_tag(self.particles.get_tag(particle_index),
                                                   zero_grad_index)
                 i += 1
             offset += i
@@ -239,8 +235,7 @@ class InParticleDetector:
             y = particles.get_y(index) + particles.get_vely(index) * dt
             if self.cells.is_inside_domain(x, y):
                 particles_in.append(index)
-#            else:
-#                print "x, y = ", x,y
+        
         if len(particles_in) > 0:
             self.particle_map[particles] = particles_in
         

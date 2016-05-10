@@ -48,7 +48,7 @@ def main():
     viscosity_index = 0.81
     mole_fraction = [0.5, 0.5]
     dia = 4.17e-10
-    mach = [2.0, 0.0, 0.0]
+    mach = [6.0, 0.0, 0.0]
     temperature = 300.0
     ref_temperature = 273.0
     number_density = 1.699e19
@@ -79,15 +79,20 @@ def main():
     simulation_time = end_time - start_time
     print "simulation time in mins (upper bound) = ", int(simulation_time / 60) + 1
     print "simulation time in sec = ", simulation_time
-    number_density = solver.get_2d_num_den(cell_x, cell_y)
+    number_density_0 = solver.get_2d_num_den(cell_x, cell_y, 0)
+    number_density_1 = solver.get_2d_num_den(cell_x, cell_y, 1)
     temperature = solver.get_2d_temperature(cell_x, cell_y)
     
     f = open('wedge_super_temperature.txt', 'w')
     np.savetxt(f, temperature)
     f.close()
     
-    f = open('wedge_super_number_density.txt', 'w')
-    np.savetxt(f, number_density)
+    f = open('wedge_super_number_density_0.txt', 'w')
+    np.savetxt(f, number_density_0)
+    f.close()
+    
+    f = open('wedge_super_number_density_1.txt', 'w')
+    np.savetxt(f, number_density_1)
     f.close()
 
 
