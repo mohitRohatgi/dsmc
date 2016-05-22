@@ -178,9 +178,8 @@ class Particles:
         self.tag = np.zeros(n_particles, dtype = int)
         self.mpv = np.zeros(n_particles)
         self.species = []
-        # end of tag particles conveys more information than the start since 
-        # the start would always be 0 while end would be a variable.
         self.tag_num = []
+        self.tag_start = []
 
 
     # this function should only be called once.
@@ -198,6 +197,7 @@ class Particles:
         abundant_index = np.argmax(mole_fraction)
         n_species = len(species)
         self.tag_num = (mole_fraction * self.num).astype(int)
+        self.tag_start = np.zeros(n_species)
         tot_num = int(sum(self.tag_num))
         
         if tot_num != self.num:
@@ -219,7 +219,7 @@ class Particles:
         
         start = 0
         for tag in range(n_species):
-            
+            self.tag_start[tag] = start
             end = start + self.tag_num[tag]
             
             self.tag[start:end] = tag
@@ -230,6 +230,10 @@ class Particles:
     
     def get_tag_num(self, tag):
         return self.tag_num[tag]
+    
+    
+    def get_tag_start(self, tag):
+        return self.tag_start[tag]
 
 
     def move_all(self, dt):
@@ -268,6 +272,10 @@ class Particles:
         return self.tag[index]
     
     
+    def get_tags(self):
+        return self.tag
+    
+    
     def get_dia(self, index):
         return self.species[self.get_tag(index)].get_dia()
     
@@ -291,7 +299,7 @@ class Particles:
     def get_mpv(self, index=None):
         if index == None:
             return self.mpv
-        return self.mpv
+        return self.mpv[index]
     
     
     def get_eu(self, index):
@@ -352,6 +360,10 @@ class Particles:
             self.x = x
         else:
             self.x[index] = x
+            
+            
+    def set_sliced_x(self, x, start, end):
+        self.x[start:end] = x
     
     
     def set_y(self, y, index=None):
@@ -359,6 +371,10 @@ class Particles:
             self.y = y
         else:
             self.y[index] = y
+            
+            
+    def set_sliced_y(self, y, start, end):
+        self.y[start:end] = y
     
     
     def set_velx(self, velx, index=None):
@@ -366,6 +382,10 @@ class Particles:
             self.u = velx
         else:
             self.u[index] = velx
+            
+            
+    def set_sliced_velx(self, velx, start, end):
+        self.u[start:end] = velx
     
     
     def set_vely(self, vely, index=None):
@@ -373,6 +393,10 @@ class Particles:
             self.v = vely
         else:
             self.v[index] = vely
+            
+            
+    def set_sliced_vely(self, vely, start, end):
+        self.v[start:end] = vely
     
     
     def set_velz(self, velz, index=None):
@@ -380,7 +404,19 @@ class Particles:
             self.w = velz
         else:
             self.w[index] = velz
+            
+            
+    def set_sliced_velz(self, velz, start, end):
+        self.w[start:end] = velz
     
     
     def set_tag(self, tag, index):
         self.tag[index] = tag
+    
+    
+    def set_tags(self, tag):
+        self.tag = tag
+    
+    
+    def set_mpv(self, index, mpv):
+        self.mpv[index] = mpv

@@ -44,20 +44,19 @@ class VhsCollider():
         vel13, vel23 = self._find_velocity(avg_vel[2], rel_vel[2])
         index1 = self.collision_pairs[pair_index][0]
         index2 = self.collision_pairs[pair_index][1]
-        particle = self.particles
-        particle.set_velx(vel11, index1)
-        particle.set_vely(vel12, index1)
-        particle.set_velz(vel13, index1)
-        particle.set_velx(vel11, index2)
-        particle.set_vely(vel12, index2)
-        particle.set_velz(vel13, index2)
+        self.particles.set_velx(vel11, index1)
+        self.particles.set_vely(vel12, index1)
+        self.particles.set_velz(vel13, index1)
+        self.particles.set_velx(vel11, index2)
+        self.particles.set_vely(vel12, index2)
+        self.particles.set_velz(vel13, index2)
     
     
     def _find_vhs_post(self, rel_speed):
         random_multiplication_factor = 2.0 * np.random.random() - 1.0
         post_u_rel = random_multiplication_factor * rel_speed
         Random_yz_angle = 2.0 * np.pi * np.random.random()
-        yz_speed = (1.0 - random_multiplication_factor ** 2)
+        yz_speed = (1.0 - random_multiplication_factor * random_multiplication_factor)
         yz_speed = np.sqrt(yz_speed) * rel_speed
         post_v_rel = yz_speed * np.sin(Random_yz_angle)
         post_w_rel = yz_speed * np.cos(Random_yz_angle)
@@ -68,9 +67,16 @@ class VhsCollider():
         particle = self.particles
         index1 = self.collision_pairs[index][0]
         index2 = self.collision_pairs[index][1]
-        u_avg = (particle.get_velx(index1) + particle.get_velx(index2)) * 0.5
-        v_avg = (particle.get_vely(index1) + particle.get_vely(index2)) * 0.5
-        w_avg = (particle.get_velz(index1) + particle.get_velz(index2)) * 0.5
+        
+        u_avg = (self.particles.get_velx(index1) + 
+                 self.particles.get_velx(index2)) * 0.5
+                 
+        v_avg = (self.particles.get_vely(index1) + 
+                 self.particles.get_vely(index2)) * 0.5
+        
+        w_avg = (self.particles.get_velz(index1) + 
+                 self.particles.get_velz(index2)) * 0.5
+                 
         return (u_avg, v_avg, w_avg)
     
     

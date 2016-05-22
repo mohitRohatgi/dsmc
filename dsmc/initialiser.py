@@ -12,11 +12,11 @@ import sampler as dm_s
 class Initialiser:
     @staticmethod
     def run(cells, gas, surf_group, domain, n_par_in_cell,
-            ref_point, closed=False):
+            closed=False, multiphase=False):
         if closed:
             cells_in = range(len(cells.get_temperature()))
         else:
-            cell_detector = CellDetector(cells, surf_group, ref_point)
+            cell_detector = CellDetector(cells, surf_group)
             cells_in = cell_detector.detect_all()
         num = n_par_in_cell * len(cells_in)
         n_eff = gas.get_number_density() * domain.get_volume() / num
@@ -24,9 +24,8 @@ class Initialiser:
         particles = dm_p.Particles(num, n_eff)
         particles.setup(gas.get_mol_frac(), gas.get_species(), gas.get_mpv())
         
-        particle_init = ParticleInitialiser(particles, n_par_in_cell,
-                                            gas, domain, num)
-        particle_init.run(cells, cells_in)
+        particle_init = ParticleInitialiser(particles, n_par_in_cell, gas, domain)
+        particle_init.run(cells, cells_in, multiphase)
         
         cells.distribute_all_particles(particles)
         sampler = dm_s.Instant_sampler(cells, cells_in, particles, 
@@ -37,7 +36,7 @@ class Initialiser:
 
 # need to modify
 class CellDetector:
-    def __init__(self, cells, surf_group, ref_point):
+    def __init__(self, cells, surf_group):
         self.cells = cells
         self.surf_group = surf_group
     
@@ -92,20 +91,14 @@ class CellDetector:
 
 
 class ParticleInitialiser:
-    def __init__(self, particles, n_par_in_cell, gas, domain, num):
+    def __init__(self, particles, n_par_in_cell, gas, domain):
         self.particles = particles
         self.n_par_in_cell = int(n_par_in_cell)
         self.gas = gas
         self.domain = domain
-        self.sample = np.random.permutation(num)
     
     
-    def run(self, cells, cells_in):
-        self._init_location(cells, cells_in)
-        self._init_velocity()
-    
-    
-    # It is assumed that only one of the constraints is applied during 
+    # It is assumed that only below mentioned constraints is applied during 
     # initialization. The following are the constrainsts :-
     # 1. There are different patches where different molecules may be 
     #    initialized. for e.g. shocktube
@@ -113,57 +106,119 @@ class ParticleInitialiser:
     #    for e.g. flow past a wedge.
     #
     # The above constraints can be satisfied simultaneously. The following can 
-    # be a solution.
+    # is the solution in this implementation.
     # Find the cell indices that satisfy the constraints.
     # For cell index, check all the patches it lies in and consequently make a
     # sequence of these cell indices for each patch.
     # Initialise the particles representing the molecule inside that patch in 
     # their respective cells.
-    def _init_location(self, cells, cells_in):
+    def run(self, cells, cells_in, multiphase):
         if self.domain.is_patched():
-            x = np.zeros(len(self.particles.get_x()))
-            y = np.zeros(len(self.particles.get_y()))
+            if multiphase:
+                
+                for tag in self.domain.get_tags():
+                    tag_cells_in = self._find_tag_cells(cells, cells_in, tag)
+                    tag_num = self.particles.get_tag_num(tag)
+                    tag_start = self.particles.get_tag_start(tag)
+                    self._init_multi_loc(cells, tag_cells_in[tag],
+                                         tag_num, tag_start)
+                
+            else:
+                self._init_patched_loc()
             
-            start = 0
-            for tag in range(self.gas.get_n_species()):
-                end = self.particles.get_tag_num(tag) + start
-                
-                x = self.domain.get_patch_x(tag)
-                x_min = x[0]
-                x_max = x[1]
-                if x_min > x_max:
-                    c = x_min
-                    x_min = x_max
-                    x_max = c
-                
-                
-                y = self.domain.get_patch_x(tag)
-                y_min = y[0]
-                y_max = y[1]
-                if y_min > y_max:
-                    c = y_min
-                    y_min = y_max
-                    y_min = c
-                
-                x[start:end] = np.random.random(end - start) * (x_max - x_min) + x_min
-                y[start:end] = np.random.random(end - start) * (y_max - y_min) + y_min
-                start = end
-            
-            self.particles.set_x(x)
-            self.particles.set_y(y)
-        
         else:
-            for index1, cell_index in enumerate(cells_in):
-                xc, yc = cells.get_center(cell_index)
-                index = index1 * self.n_par_in_cell
-                length = cells.get_cell_length(cell_index)
-                width = cells.get_cell_length(cell_index)
-                for i in range(self.n_par_in_cell):
-                    x = ((2.0 * np.random.rand() - 1) / 2.0 * length + xc)
-                    self.particles.set_x(x, self.sample[index + i])
-                    
-                    y = ((2.0 * np.random.rand() - 1) / 2.0 * width + yc)
-                    self.particles.set_y(y, self.sample[index + i])
+            self._init_location(cells, cells_in)
+        
+        self._init_velocity()
+    
+    
+    def _find_tag_cells(self, cells, cells_in, tag):
+        tag_cells_in = []
+        x_min, x_max = self.domain.get_patch_x(tag)
+        if x_min > x_max:
+            c = x_min
+            x_min = x_max
+            x_max = c    
+        
+        y_min, y_max = self.domain.get_patch_x(tag)
+        if y_min > y_max:
+            c = y_min
+            y_min = y_max
+            y_min = c
+        
+        for cell_index in cells_in:
+            xc, yc = cells.get_center(cell_index)
+            length = cells.get_cell_length(cell_index)
+            width = cells.get_cell_width(cell_index)
+            
+            cell_x_min = xc - length * 0.5
+            cell_x_max = xc + length * 0.5
+            cell_y_min = yc - width * 0.5
+            cell_y_max = yc + width * 0.5
+            
+            if (cell_x_min > x_min and cell_x_max < x_max and 
+                cell_y_min > y_min and cell_y_max < y_max):
+                    tag_cells_in.append(cell_index)
+        
+        return tag_cells_in
+    
+    
+    def _init_multi_loc(self, cells, cells_in, tag_num, tag_start):
+        sample = np.random.choice(cells_in, tag_num)
+        for index, cell_index in enumerate(sample):
+            xc, yc = cells.get_center(cell_index)
+            particle_index = index + tag_start
+            length = cells.get_cell_length(cell_index)
+            width = cells.get_cell_width(cell_index)
+            
+            x = ((2.0 * np.random.rand() - 1) / 2.0 * length + xc)
+            y = ((2.0 * np.random.rand() - 1) / 2.0 * width + yc)
+            
+            self.particles.set_x(x, particle_index)
+            self.particles.set_y(y, particle_index)
+    
+    
+    def _init_patched_loc(self):
+        x = np.zeros(len(self.particles.get_x()))
+        y = np.zeros(len(self.particles.get_y()))
+        
+        start = 0
+        for tag in range(self.gas.get_n_species()):
+            end = self.particles.get_tag_num(tag) + start
+            
+            x_min, x_max = self.domain.get_patch_x(tag)
+            if x_min > x_max:
+                c = x_min
+                x_min = x_max
+                x_max = c    
+                
+            y_min, y_max = self.domain.get_patch_x(tag)
+            if y_min > y_max:
+                c = y_min
+                y_min = y_max
+                y_min = c
+                
+            x[start:end] = np.random.random(end - start) * (x_max - x_min) + x_min
+            y[start:end] = np.random.random(end - start) * (y_max - y_min) + y_min
+            start = end
+        
+        self.particles.set_x(x)
+        self.particles.set_y(y)
+    
+    
+    def _init_location(self, cells, cells_in):
+        sample = np.random.permutation(len(self.particles.get_x()))
+        for index1, cell_index in enumerate(cells_in):
+            xc, yc = cells.get_center(cell_index)
+            index = index1 * self.n_par_in_cell
+            length = cells.get_cell_length(cell_index)
+            width = cells.get_cell_width(cell_index)
+            for i in range(self.n_par_in_cell):
+                x = ((2.0 * np.random.rand() - 1) / 2.0 * length + xc)
+                self.particles.set_x(x, sample[index + i])
+            
+                y = ((2.0 * np.random.rand() - 1) / 2.0 * width + yc)
+                self.particles.set_y(y, sample[index + i])
     
     
     # c is the speed of sound.
@@ -171,26 +226,11 @@ class ParticleInitialiser:
         k = 1.3806488e-23
         c = np.sqrt(self.gas.get_gamma() * self.gas.get_temperature() * k / 
                     self.gas.get_mass())
-        c1 = np.random.normal(0.0, 0.5, self.particles.get_particles_count())
-        c2 = np.random.normal(0.0, 0.5, self.particles.get_particles_count())
-        c3 = np.random.normal(0.0, 0.5, self.particles.get_particles_count())
+        c1 = np.random.normal(0.0, 1.0, self.particles.get_particles_count())
+        c2 = np.random.normal(0.0, 1.0, self.particles.get_particles_count())
+        c3 = np.random.normal(0.0, 1.0, self.particles.get_particles_count())
         
         mpv = self.particles.get_mpv()        
         self.particles.set_velx(c1 * mpv + self.gas.get_mach_x() * c)
         self.particles.set_vely(c2 * mpv + self.gas.get_mach_y() * c)
         self.particles.set_velz(c3 * mpv + self.gas.get_mach_z() * c)
-    
-    
-#    def _init_cells(self, cells, cells_in):
-#        c = np.sqrt(self.gas.get_temperature() * self.gas.get_gamma() * 8.314)
-#        
-#        n_particles = (self.n_par_in_cell * np.array(self.gas.get_mol_frac()))
-#        
-#        for index in cells_in:
-#            cells.set_temperature(self.gas.get_temperature(), index)
-#            
-#            for tag in range(len(self.gas.get_species())):
-#                cells.set_n_particles(n_particles[tag], tag, index)
-#            
-#            cells.set_velx(self.gas.get_mach_x() * c, index)
-#            cells.set_vely(self.gas.get_mach_y() * c, index)

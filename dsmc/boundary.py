@@ -31,10 +31,9 @@ class BoundaryManager:
 # this class takes care of boundary cell generation of the domain and it would 
 # also maps the cells to their adacent cells.
 # adj_map is a map between a line segment and the map between boundary cell on 
-# that line segment and their respective adjacent cell in the domain. 
+# that line segment and their respective adjacent cell in the domain.
 class BoundaryGenerator:
     def __init__(self, cells, domain):
-        self.ref_point = cells.get_center(0)
         self.domain = domain
         self.cells = cells
     
@@ -47,14 +46,13 @@ class BoundaryGenerator:
             for line in self.domain.get_inlet():
                 inlet_cell = self.cells.generate_cell(line)
                 inlet_cells.append(inlet_cell)
-                adj_map[inlet_cell] = self._create_map(inlet_cell, line)
+#                adj_map[inlet_cell] = self._create_map(inlet_cell, line)
         
         if self.domain.is_zero_grad_on():
             for line in self.domain.get_zero_grad():
                 zero_grad_cell = self.cells.generate_cell(line)
                 zero_grad_cells.append(zero_grad_cell)
                 adj_map[zero_grad_cell] = self._create_map(zero_grad_cell, line)
-        
         return Boundary(inlet_cells, zero_grad_cells, adj_map)
     
     
@@ -94,6 +92,8 @@ class ParticleGenerator:
     def __init__(self, boundary, gas, cells, n_particles_in_cell,
                  n_eff, particles):
         k = 1.3806488e-23
+        self.inlet_temperature = gas.get_temperature()
+        self.m_mpv_sq = 2.0 * 1.3806488e-23 * self.inlet_temperature
         c = np.sqrt(gas.get_gamma() * gas.get_temperature() * k / gas.get_mass())
         self.n_particles_in_cell = n_particles_in_cell
         self.boundary = boundary
@@ -107,17 +107,27 @@ class ParticleGenerator:
                                    gas.get_mpv())
         self.zero_grad_particles = dm_p.Particles(1)
         self.mean_inlet_velx = self.gas.get_mach_x() * c 
-        self.mean_inlet_vely = self.gas.get_mach_x() * c
-        self.mean_inlet_velz = self.gas.get_mach_x() * c
+        self.mean_inlet_vely = self.gas.get_mach_y() * c
+        self.mean_inlet_velz = self.gas.get_mach_z() * c
+        self.tag_set = range(len(gas.get_species()))
     
     
     def run(self):
+        # shuffling the tags...
+        tags = np.random.permutation(self.inlet_particles.get_tags())
+        self.inlet_particles.set_tags(tags)
+        
+        for particle_index in range(len(self.inlet_particles.get_tags())):
+            mpv = np.sqrt(self.m_mpv_sq / self.inlet_particles.get_mass(particle_index))
+            self.inlet_particles.set_mpv(particle_index, mpv)
+        
         start = 0
         for inlet_cell in self.boundary.get_inlet_cells():
             start = self._init_inlet_particles(inlet_cell, start)
         
         n_particles = self._find_zero_grad_particles()
         self.zero_grad_particles = dm_p.Particles(n_particles, self.n_eff)
+        
         
         start = 0
         for zero_grad_cell in self.boundary.get_zero_grad_cells():
@@ -132,40 +142,69 @@ class ParticleGenerator:
         return self.zero_grad_particles
     
     
-    # this function initialises the inlet particles.
+#     this function initialises the inlet particles in a particular cell index.
+#    def _init_inlet_particles(self, inlet_cell, start):
+#        offset = start
+#        for cell_index in range(len(inlet_cell.get_temperature())):
+#            i = 0
+#            while i < self.n_particles_in_cell:
+#                particle_index = offset + i
+#                x, y = self._find_rand_loc(inlet_cell, cell_index)
+#                self.inlet_particles.set_x(x, particle_index)
+#                self.inlet_particles.set_y(y, particle_index)
+#                
+#                mpv = np.sqrt( self.m_mpv_sq / self.inlet_particles.get_mass(particle_index))
+#                v1, v2, v3 = self._find_rand_vel(mpv)
+#                self.inlet_particles.set_velx(v1 + self.mean_inlet_velx, 
+#                                              particle_index)
+#                self.inlet_particles.set_vely(v2 + self.mean_inlet_vely,
+#                                              particle_index)
+#                self.inlet_particles.set_velz(v3 + self.mean_inlet_velz,
+#                                              particle_index)
+#                i += 1
+#            offset += i
+#        return offset
+    
+    
     def _init_inlet_particles(self, inlet_cell, start):
-        offset = start
-        for cell_index in range(len(inlet_cell.get_temperature())):
-            i = 0
-            while i < self.n_particles_in_cell:
-                x, y = self._find_rand_loc(inlet_cell, cell_index)
-                self.inlet_particles.set_x(x, offset + i)
-                self.inlet_particles.set_y(y, offset + i)
-                
-                v1, v2, v3 = self._find_rand_vel(self.inlet_particles, 
-                                                 offset + i)
-                self.inlet_particles.set_velx(v1 + self.mean_inlet_velx)
-                self.inlet_particles.set_vely(v2 + self.mean_inlet_vely)
-                self.inlet_particles.set_velz(v3 + self.mean_inlet_velz)
-                i += 1
-            offset += i
+        num = len(inlet_cell.get_temperature()) * self.n_particles_in_cell
+        end = start + num
+        x_min = inlet_cell.get_x_min()
+        y_min = inlet_cell.get_y_min()
+        x_max = inlet_cell.get_x_max()
+        y_max = inlet_cell.get_y_max()
         
-        return offset
+        x = np.random.random(num) * (x_max - x_min) + x_min
+        y = np.random.random(num) * (y_max - y_min) + y_min
+        
+        v_x = np.random.normal(size=num) * self.inlet_particles.get_mpv(0)
+        v_y = np.random.normal(size=num) * self.inlet_particles.get_mpv(0)
+        v_z = np.random.normal(size=num) * self.inlet_particles.get_mpv(0)
+        
+        self.inlet_particles.set_sliced_x(x, start, end)
+        self.inlet_particles.set_sliced_y(y, start, end)
+        self.inlet_particles.set_sliced_velx(v_x + self.mean_inlet_velx, start, end)
+        self.inlet_particles.set_sliced_vely(v_y + self.mean_inlet_vely, start, end)
+        self.inlet_particles.set_sliced_velz(v_z + self.mean_inlet_velz, start, end)
+        return end
     
     
     def _init_zero_grad_particles(self, zero_grad_cell, start):
         offset = start
-        for cell_index in range(len(zero_grad_cell.get_temperature())):
+        for zero_cell_index in range(len(zero_grad_cell.get_temperature())):
             i = 0
-            index = self.boundary.get_adj_cell_index(zero_grad_cell, cell_index)
-            particles_inside = self.cells.get_particles_inside(index)
+            cell_index = self.boundary.get_adj_cell_index(zero_grad_cell,
+                                                          zero_cell_index)
+            particles_inside = self.cells.get_particles_inside(cell_index)
             while i < len(particles_inside):
-                x, y = self._find_rand_loc(zero_grad_cell, cell_index)
-                self.zero_grad_particles.set_x(x, offset + i)
-                self.zero_grad_particles.set_y(y, offset + i)
+                x, y = self._find_rand_loc(zero_grad_cell, zero_cell_index)
                 
                 particle_index = particles_inside[i]
                 zero_grad_index = offset + i
+                
+                self.zero_grad_particles.set_x(x, zero_grad_index)
+                self.zero_grad_particles.set_y(y, zero_grad_index)
+                
                 self.zero_grad_particles.set_velx(self.particles.get_velx(particle_index),
                                                   zero_grad_index)
                 self.zero_grad_particles.set_vely(self.particles.get_vely(particle_index),
@@ -177,6 +216,39 @@ class ParticleGenerator:
                 i += 1
             offset += i
         return offset
+    
+    
+#    def _init_zero_grad_particles(self, zero_grad_cell, start):
+#        offset = start
+#        k = 1.3806488e-23
+#        for zero_cell_index in range(len(zero_grad_cell.get_temperature())):
+#            i = 0
+#            cell_index = self.boundary.get_adj_cell_index(zero_grad_cell, 
+#                                                          zero_cell_index)
+#            temperature = self.cells.get_temperature(cell_index)
+#            while i < len(self.cells.get_particles_inside(cell_index)):
+#                particle_index = offset + i
+#                mass = self.particles.get_mass(particle_index)
+#                if temperature < 1.0e-6:
+#                    print temperature, cell_index, self.cells.get_velx(cell_index)
+#                    exit()
+#                mpv = np.sqrt(2.0 * k * temperature / mass)
+#                x, y = self._find_rand_loc(zero_grad_cell, zero_cell_index)
+#                self.zero_grad_particles.set_x(x, particle_index)
+#                self.zero_grad_particles.set_y(y, particle_index)
+#                
+#                
+#                v1, v2, v3 = self._find_rand_vel(mpv)
+#                self.zero_grad_particles.set_velx(v1 + self.cells.get_velx(cell_index),
+#                                                  particle_index)
+#                self.zero_grad_particles.set_vely(v2 + self.cells.get_vely(cell_index),
+#                                                  particle_index)
+#                self.zero_grad_particles.set_velz(v3 + self.cells.get_velz(cell_index),
+#                                                  particle_index)
+#                i += 1
+#            offset += i
+#        
+#        return offset
     
     
     # this is a helper function to find the total number of particles needed 
@@ -213,10 +285,10 @@ class ParticleGenerator:
     
     # this function finds and sets the particle velocity.
     # mean vel is the velocity vector of the cell in which particle is.
-    def _find_rand_vel(self, particles, index):
-        v1 = np.random.normal(0.0, 0.5) * particles.get_mpv(index)
-        v2 = np.random.normal(0.0, 0.5) * particles.get_mpv(index)
-        v3 = np.random.normal(0.0, 0.5) * particles.get_mpv(index)
+    def _find_rand_vel(self, mpv):
+        v1 = np.random.normal(0.0, 1.0) * mpv
+        v2 = np.random.normal(0.0, 1.0) * mpv
+        v3 = np.random.normal(0.0, 1.0) * mpv
         return (v1, v2, v3)
 
 

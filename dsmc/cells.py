@@ -10,7 +10,7 @@ Distribution algorithm would change depending upon the geometry.
 particles out is a domain geometry specific job.
 So, it needs to be done in the distributor itself.
 Here, I am using rectangular cells having constant length and width.
-Also, it is assumed that the rectangular cells only have verticla and 
+Also, it is assumed that the rectangular cells only have vertical and 
 horizontal sides.
 """
 
@@ -48,6 +48,7 @@ class RectCells:
         self.w = np.zeros(n_cells)
         self.mass = np.zeros(n_cells)
         self.number_density = np.zeros((n_species, n_cells), dtype=float)
+        self.gamma = np.zeros(n_cells)
         # n_particles gives the no. of particles of each species at each cell
         # for e.g. no. of particles of species of tag 1 at cell 0 can be 
         # located by self.n_particles[0][0], (cell index is the second one)
@@ -97,7 +98,6 @@ class RectCells:
             y = y - self.datum[1]
             cell_index = int(y / self.cell_width) * self.n_x
             cell_index += int(x / self.cell_length)
-    #        print "cell_index = ", cell_index, x, y
             return cell_index
         else:
             return None
@@ -168,6 +168,7 @@ class RectCells:
     def is_inside_domain(self, x, y):
         if (x < self.datum[0] or y < self.datum[1] or
             x > self.x_max or y > self.y_max):
+#            print self.datum, self.x_max, self.y_max
             return False
         else:
             return True
@@ -189,6 +190,19 @@ class RectCells:
             mid = int((start + end) / 2)
             self.get_subset_center(stack, start, mid)
             self.get_subset_center(stack, mid + 1, end)
+    
+    
+    def get_x_min(self):
+        return self.datum[0]
+    
+    def get_y_min(self):
+        return self.datum[1]
+    
+    def get_x_max(self):
+        return self.x_max
+    
+    def get_y_max(self):
+        return self.y_max
     
     
     # this function generates the location of cell centre given its cell index.
@@ -331,3 +345,15 @@ class RectCells:
             self.w = velz
         else:
             self.w[cell_index] = velz
+    
+    
+    def get_gamma(self, cell_index=None):
+        if cell_index == None:
+            return self.gamma
+        return self.gamma[cell_index]
+    
+    
+    def set_gamma(self, gamma, cell_index=None):
+        if cell_index == None:
+            self.gamma = gamma
+        self.gamma[cell_index] = gamma

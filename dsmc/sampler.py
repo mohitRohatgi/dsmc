@@ -15,9 +15,7 @@ class SamplingManager:
                  particles, n_steps, ignore_frac):
         self.cells = cells
         self.particles = particles
-        self.p_time = 0.0
         self.n_steps = int(n_steps)
-        self.p_step = 0
         self.instant_sampler = Instant_sampler(cells, cells_in, particles,
                                                n_species)
         self.time_sampler = TimeSampler(cells, cells_in, particles, n_steps,
@@ -27,19 +25,22 @@ class SamplingManager:
     def run(self):
         self.instant_sampler.run()
         self.time_sampler.sample_domain()
-        self.p_step += 1
     
     
     def get_temperature(self):
         return self.time_sampler.get_temperature()
     
     
+    def get_mach(self):
+        return self.time_sampler.get_mach()
+    
+    
     def get_all_number_density(self):
         return self.time_sampler.get_all_number_density()
     
     
-    def get_number_density(self):
-        return self.time_sampler.get_number_density()
+    def get_number_density(self, tag):
+        return self.time_sampler.get_number_density(tag)
 
 
 
@@ -51,6 +52,12 @@ class TimeSampler:
         self.particles = particles
         self.number_density = np.zeros((n_species, len(cells.get_temperature())))
         self.temperature = np.zeros(len(cells.get_temperature()))
+        self.u = np.zeros_like(self.temperature)
+        self.v = np.zeros_like(self.temperature)
+        self.w = np.zeros_like(self.temperature)
+        self.gamma = np.zeros_like(self.temperature)
+        self.mass = np.zeros_like(self.temperature)
+        self.mach = np.zeros_like(self.temperature)
         self.n_steps = n_steps
         self.step_counter = 0
         self.n_species = n_species
@@ -69,29 +76,47 @@ class TimeSampler:
         return self.temperature
     
     
+    def get_mach(self):
+        return self.u
+    
+    
     def sample_domain(self):
         self.step_counter += 1
         if (self.step_counter >= self.n_steps * self.ignore_frac):
-            for index in self.cells_in:
-                self._sample_cell(index)
+            self._sample_cell()
+            
+            if (self.step_counter >= self.n_steps):
+                self._output()
     
     
-    def _sample_cell(self, cell_index):
-        self.temperature[cell_index] += self.cells.get_temperature(cell_index)
-        for tag in range(self.n_species):
-            self.number_density[tag][cell_index] += (
-                            self.cells.get_number_density(tag, cell_index))
+    def _sample_cell(self):
+        self.u += self.cells.get_velx()
+        self.v += self.cells.get_vely()
+        self.w += self.cells.get_velz()
+        self.mass += self.cells.get_mass()
+        self.gamma += self.cells.get_gamma()
+        self.temperature += self.cells.get_temperature()
+        self.number_density += self.cells.get_number_density()
+    
+    
+    def _output(self):
+        k = 1.3806488e-23
+        sample_size = self.n_steps * (1.0 - self.ignore_frac)
+        self.gamma /= sample_size
+        self.mass /= sample_size
+        self.u /= sample_size
+        self.v /= sample_size
+        self.w /= sample_size
+        self.temperature /= sample_size
+        self.number_density /= sample_size
+        sound_speed_sq = self.gamma * k * self.temperature / self.mass
+        self.mach = self.u * self.u + self.v * self.v + self.w * self.w
+        self.mach /= sound_speed_sq
+        self.mach = np.sqrt(self.mach)
         
-        if (self.step_counter >= self.n_steps):
-            self._output(cell_index)
-    
-    
-    def _output(self, cell_index):
+        self.mach[self.temperature < 1.0e-6] = 0.0
         
-        self.temperature[cell_index] /= self.n_steps * (1.0 - self.ignore_frac)
         
-        for tag in range(self.n_species):
-            self.number_density[tag][cell_index] /= self.n_steps * (1.0 - self.ignore_frac)
 
 
 
@@ -115,12 +140,11 @@ class Instant_sampler:
     
     def _find_properties(self):
         for index in self.cells_in:
-            self._find_property(index)
+            self._set_property(index)
     
     
-    def _find_property(self, cell_index):
-        count = 0
-        u, v, w, mass = 0.0, 0.0, 0.0, 0.0
+    def _set_property(self, cell_index):
+        u, v, w, mass, gamma = 0.0, 0.0, 0.0, 0.0, 0.0
         
         if len(self.cells.get_particles_inside(cell_index)) > 0:
             for index in self.cells.get_particles_inside(cell_index):
@@ -128,17 +152,19 @@ class Instant_sampler:
                 v += self.particles.get_vely(index) * self.particles.get_mass(index)
                 w += self.particles.get_velz(index) * self.particles.get_mass(index)
                 mass += self.particles.get_mass(index)
-                count += 1
+                gamma += self.particles.get_gamma(index)
             
             u /= mass
             v /= mass
             w /= mass
-            mass /= count
+            mass /= len(self.cells.get_particles_inside(cell_index))
+            gamma /= len(self.cells.get_particles_inside(cell_index))
             
-            self.cells.set_velx(u, cell_index)
-            self.cells.set_vely(v, cell_index)
-            self.cells.set_velz(w, cell_index)
-            self.cells.set_mass(mass, cell_index)
+        self.cells.set_velx(u, cell_index)
+        self.cells.set_vely(v, cell_index)
+        self.cells.set_velz(w, cell_index)
+        self.cells.set_mass(mass, cell_index)
+        self.cells.set_gamma(gamma, cell_index)
     
     
     def _sample_domain(self):
@@ -149,13 +175,13 @@ class Instant_sampler:
     
     def _find_temperature(self, cell_index):
         k = 1.3806488e-23
-        constt = len(self.cells.get_particles_inside(cell_index))
-        self.cells.set_temperature(0.0, cell_index)
-        if constt > 0.0:
+        if len(self.cells.get_particles_inside(cell_index)) > 1:
             energy = self._find_cell_energy(cell_index)
             vel_energy = self._find_vel_energy(cell_index)
-            self.cells.set_temperature(((energy - vel_energy) * 2.0 / 3.0 / k), 
-                                   cell_index)
+            temperature = (energy - vel_energy) * 2.0 / 3.0 / k
+            self.cells.set_temperature(temperature, cell_index)
+        else:
+            self.cells.set_temperature(0.0, cell_index)
     
     def _find_cell_energy(self, cell_index):
         energy = 0.0
@@ -169,8 +195,7 @@ class Instant_sampler:
         u = self.cells.get_velx(cell_index)
         v = self.cells.get_vely(cell_index)
         w = self.cells.get_velz(cell_index)
-        mass = self.cells.get_mass(cell_index)
-        return (u ** 2.0 + v ** 2.0 + w ** 2.0) * mass
+        return (u * u + v * v + w * w) * self.cells.get_mass(cell_index)
     
     
     def _find_number_density(self, index):

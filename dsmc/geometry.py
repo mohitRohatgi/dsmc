@@ -42,6 +42,9 @@ class Domain:
     def is_patched(self):
         return bool(self.patch_x)
     
+    def get_tags(self):
+        return self.patch_x.keys()
+    
     def get_inlet(self):
         return self.inlet
     

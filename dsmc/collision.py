@@ -11,13 +11,10 @@ import math as math
 
 class CollisionManager:
     def __init__(self, cells, particles, gas, dt, Detector, Collider):
-#        self.detector = Detector(cells, particles, gas, dt)
-        self.ref_max_area = np.ones(len(cells.particles_inside)) 
-        self.ref_max_area *= particles.get_dia(0) * particles.get_dia(0) * np.pi * 0.5
-        u_max = max(particles.get_velx())
-        v_max = max(particles.get_vely())
-        w_max = max(particles.get_velz())
-        self.ref_max_area *= (u_max * u_max + v_max * v_max + w_max * w_max)
+        self.detector = Detector(cells, particles, gas, dt)
+        self.ref_max_area = np.ones(len(cells.particles_inside))
+        self.ref_max_area *= (particles.get_dia(0) * particles.get_dia(0)
+                             * np.pi / 2.0) * 300.0
         self.rem_cols = np.zeros(len(cells.particles_inside), dtype = float)
         self.cells = cells
         self.particles = particles
@@ -38,13 +35,13 @@ class CollisionManager:
     
     
     def collide(self):
-#        col_pair, rel_speed = self.detector.run()
-        col_pair, rel_speed = detect_collision(self.cells.particles_inside, 
-                    self.cells.cell_volume, self.dt, self.dia, 
-                    self.particles.n_eff, self.reduced_mass, self.n_species,
-                    self.particles.u, self.particles.v, self.particles.w,
-                    self.ref_temp, self.visc_index, self.ref_max_area, 
-                    self.rem_cols, self.tag, self.n_particles)
+        col_pair, rel_speed = self.detector.run()
+#        col_pair, rel_speed = detect_collision(self.cells.particles_inside, 
+#                    self.cells.cell_volume, self.dt, self.dia, 
+#                    self.particles.n_eff, self.reduced_mass, self.n_species,
+#                    self.particles.u, self.particles.v, self.particles.w,
+#                    self.ref_temp, self.visc_index, self.ref_max_area, 
+#                    self.rem_cols, self.tag, self.n_particles)
         
         self.collider.run(col_pair, rel_speed)
 
@@ -147,15 +144,7 @@ class CollisionDetector:
         length = len(cells.get_temperature())
         self.ref_max_area = np.ones(length)
         self.ref_max_area *= (self.particles.get_dia(0) * self.particles.get_dia(0)
-                             * np.pi / 2.0)
-        
-        u_max = max(self.particles.get_velx())
-        v_max = max(self.particles.get_vely())
-        w_max = max(self.particles.get_velz())
-        self.ref_max_area *= (u_max * u_max + v_max * v_max + w_max * w_max)
-        
-        self.threshold = 0.0
-        self.next_index = 0
+                             * np.pi / 2.0) * 300.0
         
         self.n_particle = np.zeros(length, dtype=int)
         self.int_collisions = np.zeros(length, dtype = int)
@@ -176,8 +165,6 @@ class CollisionDetector:
                             for i in range(len(self.cells.get_temperature()))]
         
         self._find_collisions()
-        self.threshold = np.random.rand(sum(self.int_collisions))
-        self.cells.shuffle_all_particles()
         for cell_index in range(len(self.cells.get_temperature())):
             total_collided = len(rel_speed)
             self._detect_cell(collision_pair, rel_speed, cell_index)
@@ -270,11 +257,10 @@ class CollisionDetector:
         omega_ref *= 0.5
         
         k = 1.3806488e-23
-        constt = (2.0 * k * T_ref / self.reduced_mass / (relative_speed * 
+        constt = (2.0 * k * T_ref / (self.reduced_mass * relative_speed * 
                   relative_speed)) ** (omega_ref - 0.5)
         constt /= math.gamma(2.5 - omega_ref)
         col_area = relative_speed * (0.5 * np.pi * d_ref * d_ref) * constt
-        
         
         if (self.ref_max_area[cell_index] < col_area):
             self.ref_max_area[cell_index] = col_area
