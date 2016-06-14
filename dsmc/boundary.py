@@ -286,9 +286,9 @@ class ParticleGenerator:
     # this function finds and sets the particle velocity.
     # mean vel is the velocity vector of the cell in which particle is.
     def _find_rand_vel(self, mpv):
-        v1 = np.random.normal(0.0, 1.0) * mpv
-        v2 = np.random.normal(0.0, 1.0) * mpv
-        v3 = np.random.normal(0.0, 1.0) * mpv
+        v1 = np.random.normal(0.0, 0.5) * mpv
+        v2 = np.random.normal(0.0, 0.5) * mpv
+        v3 = np.random.normal(0.0, 0.5) * mpv
         return (v1, v2, v3)
 
 

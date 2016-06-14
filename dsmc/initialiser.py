@@ -31,6 +31,7 @@ class Initialiser:
         sampler = dm_s.Instant_sampler(cells, cells_in, particles, 
                                        gas.get_n_species())
         sampler.run()
+        print "cell temperature = ", cells.temperature.mean()
         return [particles, cells_in]
 
 
@@ -226,9 +227,9 @@ class ParticleInitialiser:
         k = 1.3806488e-23
         c = np.sqrt(self.gas.get_gamma() * self.gas.get_temperature() * k / 
                     self.gas.get_mass())
-        c1 = np.random.normal(0.0, 1.0, self.particles.get_particles_count())
-        c2 = np.random.normal(0.0, 1.0, self.particles.get_particles_count())
-        c3 = np.random.normal(0.0, 1.0, self.particles.get_particles_count())
+        c1 = np.random.normal(0.0, 0.5, self.particles.get_particles_count())
+        c2 = np.random.normal(0.0, 0.5, self.particles.get_particles_count())
+        c3 = np.random.normal(0.0, 0.5, self.particles.get_particles_count())
         
         mpv = self.particles.get_mpv()        
         self.particles.set_velx(c1 * mpv + self.gas.get_mach_x() * c)

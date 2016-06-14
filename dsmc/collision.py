@@ -11,6 +11,7 @@ import math as math
 
 class CollisionManager:
     def __init__(self, cells, particles, gas, dt, Detector, Collider):
+        print Detector
         self.detector = Detector(cells, particles, gas, dt)
         self.ref_max_area = np.ones(len(cells.particles_inside))
         self.ref_max_area *= (particles.get_dia(0) * particles.get_dia(0)

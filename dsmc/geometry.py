@@ -10,7 +10,7 @@ from numpy import sqrt
 # assuming domain is rectangular and surface is a polygon.
 # inlet, outlet and surface need to be wrapped in a list even if they are just 
 # represented by a single point.
-# patch x is a dict of x coordinate of the particle vpatches,
+# patch x is a dict of x coordinate of the particle patches,
 # if present in the domain
 # A patch of particles in a domain means a subspace of whole domain of the 
 # simulation in which a particular molecule is constricted initially.

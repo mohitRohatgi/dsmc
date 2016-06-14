@@ -66,7 +66,7 @@ class DsmcSolver:
             col_time += time.time() - start
             
             start = time.time()
-            self.sampling_manager.run()
+            self.sampling_manager.sample()
             samp_time += time.time() - start
             
             if (self.open):
@@ -97,9 +97,27 @@ class DsmcSolver:
 
     
     # this function should return mach in 2d numpy array
-    def get_2d_mach(self, cell_x, cell_y):
+    def get_2d_speed(self, cell_x, cell_y):
         return self._convert_to_2d(cell_x, cell_y, 
-                                   self.sampling_manager.get_mach())
+                                   self.sampling_manager.get_speed())
+
+    
+    # this function should return mach in 2d numpy array
+    def get_2d_u(self, cell_x, cell_y):
+        return self._convert_to_2d(cell_x, cell_y, 
+                                   self.sampling_manager.get_u())
+
+    
+    # this function should return mach in 2d numpy array
+    def get_2d_v(self, cell_x, cell_y):
+        return self._convert_to_2d(cell_x, cell_y, 
+                                   self.sampling_manager.get_v())
+
+    
+    # this function should return mach in 2d numpy array
+    def get_2d_w(self, cell_x, cell_y):
+        return self._convert_to_2d(cell_x, cell_y, 
+                                   self.sampling_manager.get_w())
     
     
     # this function should return number density in 2d numpy array

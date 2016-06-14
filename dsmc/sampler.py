@@ -16,31 +16,119 @@ class SamplingManager:
         self.cells = cells
         self.particles = particles
         self.n_steps = int(n_steps)
-        self.instant_sampler = Instant_sampler(cells, cells_in, particles,
-                                               n_species)
-        self.time_sampler = TimeSampler(cells, cells_in, particles, n_steps,
-                                         n_species, ignore_frac)
+        self.ignore_steps = int(round(ignore_frac * n_steps))
+        self.current_step = 0
+        self.u = np.zeros_like(cells.get_temperature())
+        self.v = np.zeros_like(self.u)
+        self.w = np.zeros_like(self.u)
+        self.speed_sq = np.zeros_like(self.u)
+        self.mass = np.zeros_like(self.u)
+        self.gamma = np.zeros_like(self.u)
+        self.mach = np.zeros_like(self.u)
+        self.num_particles = np.zeros((len(self.u), n_species))
+        self.tot_particles = np.zeros_like(self.u)
+        self.tot_energy = np.zeros_like(self.u)
+        self.av_prop_found = False
     
     
-    def run(self):
-        self.instant_sampler.run()
-        self.time_sampler.sample_domain()
+    def sample(self):
+        #self.instant_sampler.run()
+        #self.time_sampler.sample_domain()
+        self.current_step += 1
+        if self.current_step >= self.ignore_steps:
+            self.particles.compute_energy()
+            for cell_index in range(len(self.u)):
+                for particle_index in self.cells.get_particles_inside(cell_index):
+                    self.u[cell_index] += self.particles.get_velx(particle_index)
+                    self.v[cell_index] += self.particles.get_vely(particle_index)
+                    self.w[cell_index] += self.particles.get_velz(particle_index)
+                    self.mass[cell_index] += self.particles.get_mass(particle_index)
+                    self.gamma[cell_index] += self.particles.get_gamma(particle_index)
+                    
+                    self.tot_energy[cell_index] += (self.particles.get_eu(particle_index) +
+                                        self.particles.get_ev(particle_index) + 
+                                        self.particles.get_ew(particle_index))
+                    
+                    self.num_particles[cell_index, 
+                                    self.particles.get_tag(particle_index)] += 1
+                
     
     
     def get_temperature(self):
-        return self.time_sampler.get_temperature()
+        if not self.av_prop_found:
+            self._find_av_prop()
+            self.av_prop_found = True
+            
+        k = 1.3806488e-23
+        vel_energy = self.speed_sq * self.mass
+        
+        return 2.0 / 3.0 / k * (self.tot_energy - self.speed_sq * self.mass)
     
     
-    def get_mach(self):
-        return self.time_sampler.get_mach()
+    def get_u(self):
+        if not self.av_prop_found:
+            self._find_av_prop()
+            self.av_prop_found = True
+        return self.u
+        
+        
+    def get_v(self):
+        if not self.av_prop_found:
+            self._find_av_prop()
+            self.av_prop_found = True
+        return self.v
+        
+        
+    def get_w(self):
+        if not self.av_prop_found:
+            self._find_av_prop()
+            self.av_prop_found = True
+        return self.w
+    
+    
+    def get_speed(self):
+        if not self.av_prop_found:
+            self._find_av_prop()
+            self.av_prop_found = True
+        return np.sqrt(self.speed_sq)
+    
+    
+    def get_gamma(self):
+        if not self.av_prop_found:
+            self._find_av_prop()
+            self.av_prop_found = True
+        return self.gamma
+    
+    
+    def get_mass(self):
+        if not self.av_prop_found:
+            self._find_av_prop()
+            self.av_prop_found = True
+        return self.mass
     
     
     def get_all_number_density(self):
-        return self.time_sampler.get_all_number_density()
+        if not self.av_prop_found:
+            self._find_av_prop()
+            self.av_prop_found = True
+        return self.tot_particles / self.cells.get_cell_volume() / (
+                self.n_steps - self.ignore_steps)
     
     
     def get_number_density(self, tag):
-        return self.time_sampler.get_number_density(tag)
+        return self.num_particles[:, tag] / self.cells.get_cell_volume() / (
+               self.n_steps - self.ignore_steps)
+    
+    
+    def _find_av_prop(self):
+        self.tot_particles = self.num_particles.sum(axis=1)
+        self.u /= self.tot_particles
+        self.v /= self.tot_particles
+        self.w /= self.tot_particles
+        self.mass /= self.tot_particles
+        self.gamma /= self.tot_particles
+        self.speed_sq = self.u * self.u + self.v * self.v + self.w * self.w
+        self.tot_energy /= self.tot_particles
 
 
 
@@ -176,14 +264,14 @@ class Instant_sampler:
     def _find_temperature(self, cell_index):
         k = 1.3806488e-23
         if len(self.cells.get_particles_inside(cell_index)) > 1:
-            energy = self._find_cell_energy(cell_index)
+            energy = self._find_energy(cell_index)
             vel_energy = self._find_vel_energy(cell_index)
             temperature = (energy - vel_energy) * 2.0 / 3.0 / k
             self.cells.set_temperature(temperature, cell_index)
         else:
             self.cells.set_temperature(0.0, cell_index)
     
-    def _find_cell_energy(self, cell_index):
+    def _find_energy(self, cell_index):
         energy = 0.0
         for index in self.cells.get_particles_inside(cell_index):
             energy += (self.particles.get_eu(index) + self.particles.get_ev(

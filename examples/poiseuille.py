@@ -24,11 +24,11 @@ def main():
     
     plate1 = [((0.0, 0.0), (1.0, 0.0))]
     ref_point = (0.5, -0.5)
-    surf_temp1 = 1000.0
+    surf_temp1 = 300.0
     
     plate2 = [((0.0, 1.0), (1.0, 1.0))]
     ref_point2 = (0.5, 1.5)
-    surf_temp2 = 1000.0
+    surf_temp2 = 300.0
     # creating surface
     surf_group = SurfaceGroup()
     surf_group.add_new_group(plate1, ref_point, surf_temp1)
@@ -37,7 +37,7 @@ def main():
     inlet = [((0.0, 0.0), (0.0, 1.0))]
     outlet = [((1.0, 0.0), (1.0, 1.0))]
     zero_grad  = [((0.0, 0.0), (1.0, 0.0)), ((0.0, 1.0), (1.0, 1.0))]
-    center = (0.5,0.5)
+    center = (0.5, 0.5)
     length = 1.0
     width = 1.0
     volume = 1.0
@@ -45,19 +45,19 @@ def main():
     
     
 #    ensemble_sample = 10
-    sample_size = 10
+    time_av_sample = 10000
     dof = 3.0
     mass = 66.3e-27
     viscosity_coeff = 2.117
     viscosity_index = 0.81
     mole_fraction = [0.5, 0.5]
     dia = 4.17e-10
-    mach = [5.0, 0.0, 0.0]
+    mach = [3.0, 0.0, 0.0]
     temperature = 300.0
     ref_temperature = 273.0
-    number_density = 1.699e19
+    number_density = 1.699e20
     gamma = 5.0 / 3.0
-    n_particles_in_cell = 10
+    n_particles_in_cell = 8
     ref_point = (0.1, 0.5)
     argon = Molecules(dia, viscosity_index, mass, viscosity_coeff, dof, 0,
                 ref_temperature, gamma, volume, number_density)
@@ -67,31 +67,62 @@ def main():
     gas.setup()
 #    dl = min(gas.mean_f_path)
 #    dt = min(gas.mean_col_time)
-    dt = 1.0e-5
+    dt = 1.0e-7
 #    print dt
 #    cell_x, cell_y = np.ceil(length / dl), np.ceil(width / dl)
-    cell_x, cell_y = 10, 10
+    cell_x, cell_y = 200, 200
     cells = RectCells(cell_x, cell_y, length, width, center, 2)
     
     start_time = time()
     solver = DsmcSolver(cells, gas, domain, surf_group, n_particles_in_cell,
-                        ref_point, dt, sample_size, CollisionDetector,
-                        VhsCollider, Diffuse)
+                         dt, time_av_sample, CollisionDetector,
+                        VhsCollider, Diffuse, ignore_frac=0.5)
     solver.run()
     end_time = time()
     
     simulation_time = end_time - start_time
-    print "simulation time in mins (upper bound) = ", int(simulation_time / 60) + 1
+    print "simulation time in mins (upper bound) = ", int(round(simulation_time / 60))
     print "simulation time in sec = ", simulation_time
-    number_density = solver.get_2d_num_den(cell_x, cell_y)
+    number_density_0 = solver.get_2d_num_den(cell_x, cell_y, 0)
+    number_density_1 = solver.get_2d_num_den(cell_x, cell_y, 1)
     temperature = solver.get_2d_temperature(cell_x, cell_y)
+    speed = solver.get_2d_speed(cell_x, cell_y)
+    u = solver.get_2d_u(cell_x, cell_y)
+    v = solver.get_2d_v(cell_x, cell_y)
+    w = solver.get_2d_w(cell_x, cell_y)
+    pressure = (number_density_0 + number_density_1) * 1.3806488e-23 * temperature
     
-    f = open('poiseuille_temperature.txt', 'w')
+    f = open('poise_super_temperature.txt', 'w')
     np.savetxt(f, temperature)
     f.close()
     
-    f = open('poiseuille_number_density.txt', 'w')
-    np.savetxt(f, number_density)
+    f = open('poise_super_number_density_0.txt', 'w')
+    np.savetxt(f, number_density_0)
+    f.close()
+    
+    f = open('poise_super_number_density_1.txt', 'w')
+    np.savetxt(f, number_density_1)
+    f.close()
+    
+    f = open('poise_super_speed.txt', 'w')
+    np.savetxt(f, speed)
+    f.close()
+    
+    f = open('poise_super_u.txt', 'w')
+    np.savetxt(f, u)
+    f.close()
+    f.close()
+    
+    f = open('poise_super_v.txt', 'w')
+    np.savetxt(f, v)
+    f.close()
+    
+    f = open('poise_super_w.txt', 'w')
+    np.savetxt(f, w)
+    f.close()
+    
+    f = open('poise_super_pressure.txt', 'w')
+    np.savetxt(f, pressure)
     f.close()
 
 

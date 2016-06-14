@@ -91,6 +91,7 @@ class Gas:
             self.mass += species.get_mass() * self.mol_frac[index]
             self.mpv[index] = np.sqrt(2.0 * k * self.temperature 
                                             / species.get_mass())
+            # print self.mpv[index]
             if len(self.species) > 1:
                 prod *= species.get_mass()
                 count += species.get_mass()
