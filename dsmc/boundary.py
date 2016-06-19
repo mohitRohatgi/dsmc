@@ -177,9 +177,9 @@ class ParticleGenerator:
         x = np.random.random(num) * (x_max - x_min) + x_min
         y = np.random.random(num) * (y_max - y_min) + y_min
         
-        v_x = np.random.normal(size=num) * self.inlet_particles.get_mpv(0)
-        v_y = np.random.normal(size=num) * self.inlet_particles.get_mpv(0)
-        v_z = np.random.normal(size=num) * self.inlet_particles.get_mpv(0)
+        v_x = np.random.normal(loc=0.0, scale=0.5, size=num) * self.inlet_particles.get_mpv(0)
+        v_y = np.random.normal(loc=0.0, scale=0.5, size=num) * self.inlet_particles.get_mpv(0)
+        v_z = np.random.normal(loc=0.0, scale=0.5, size=num) * self.inlet_particles.get_mpv(0)
         
         self.inlet_particles.set_sliced_x(x, start, end)
         self.inlet_particles.set_sliced_y(y, start, end)

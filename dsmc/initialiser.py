@@ -18,6 +18,10 @@ class Initialiser:
         else:
             cell_detector = CellDetector(cells, surf_group)
             cells_in = cell_detector.detect_all()
+        f = open('cells_in.txt', 'w')
+        np.savetxt(f, cells_in)
+        f.close()
+        exit()
         num = n_par_in_cell * len(cells_in)
         n_eff = gas.get_number_density() * domain.get_volume() / num
         
